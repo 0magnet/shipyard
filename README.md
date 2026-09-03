@@ -63,13 +63,14 @@ instantiating another wasm module.
   Go/wasm — the shape of a netscrape port: its chrome (tabs, address bar, back/forward, reload) is DOM built from Go via
   `syscall/js`, and each tab is an `<iframe>` Go navigates. `run /work/browser.wasm` opens it in a window.
   Verified: the browser comes up and its iframe engine navigates.
-- **Next — full netscrape parity.** Tabs, the dmsg/clearnet transports, and
-  swapping this Go browser in for the JS netscrape (adapting skywire's wasm
-  visor at the same time).
+- **Next — full netscrape parity.** The browser has tabs and direct-mode
+  navigation now; parity needs the transcoding engine that inlines a fetched
+  page into a sandboxed iframe (the bulk of netscrape's 3.6k-line browse.js)
+  and the clearnet/dmsg transports feeding it — the `fetchPage` seam is marked
+  in `cmd/browser`. Then swap the Go browser in for the JS netscrape, adapting
+  skywire's wasm visor at the same time.
 - **Lazy std + persistence.** Seed the standard library on demand and cache it
   (with the module cache) in IndexedDB via jsfs, so a reload is instant.
-- **netscrape in Go.** Its chrome is DOM work, its transport is Go (dmsg is
-  already Go); porting it means shipwright compiles the browser too.
 
 ## Build
 
