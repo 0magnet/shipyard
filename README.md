@@ -60,9 +60,8 @@ instantiating another wasm module.
   live UI. Headless-verified: build a GUI program in the terminal, run it, and
   a second window draws its output.
 - **✓ A browser, in Go.** `cmd/browser` is a minimal web browser written in
-  Go/wasm — the shape of a netscrape port: its chrome (address bar,
-  back/forward, reload) is DOM built from Go via `syscall/js`, its engine an
-  `<iframe>` Go points at a URL. `run /work/browser.wasm` opens it in a window.
+  Go/wasm — the shape of a netscrape port: its chrome (tabs, address bar, back/forward, reload) is DOM built from Go via
+  `syscall/js`, and each tab is an `<iframe>` Go navigates. `run /work/browser.wasm` opens it in a window.
   Verified: the browser comes up and its iframe engine navigates.
 - **Next — full netscrape parity.** Tabs, the dmsg/clearnet transports, and
   swapping this Go browser in for the JS netscrape (adapting skywire's wasm
