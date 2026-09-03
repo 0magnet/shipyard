@@ -59,16 +59,23 @@ instantiating another wasm module.
   `$SHIPYARD_MOUNT`), so `go build -o clock.wasm . && run clock.wasm` opens a
   live UI. Headless-verified: build a GUI program in the terminal, run it, and
   a second window draws its output.
-- **✓ A browser, in Go.** `cmd/browser` is a minimal web browser written in
-  Go/wasm — the shape of a netscrape port: its chrome (tabs, address bar, back/forward, reload) is DOM built from Go via
-  `syscall/js`, and each tab is an `<iframe>` Go navigates. `run /work/browser.wasm` opens it in a window.
-  Verified: the browser comes up and its iframe engine navigates.
-- **Next — full netscrape parity.** The browser has tabs and direct-mode
-  navigation now; parity needs the transcoding engine that inlines a fetched
-  page into a sandboxed iframe (the bulk of netscrape's 3.6k-line browse.js)
-  and the clearnet/dmsg transports feeding it — the `fetchPage` seam is marked
-  in `cmd/browser`. Then swap the Go browser in for the JS netscrape, adapting
-  skywire's wasm visor at the same time.
+- **✓ A browser, in Go.** `cmd/browser` is a web browser written in Go/wasm —
+  a netscrape port. Chrome (tabs, address bar, back/forward, reload) is DOM from
+  `syscall/js`; each tab is a sandboxed `<iframe>`. It **fetches** pages over a
+  pluggable transport (`fetchVia`), **transcodes** them (renders in a sandboxed
+  srcdoc, inlines stylesheets as `<style>` and images as `data:` URIs via a
+  parent/sandbox relay), and **relays navigation** (a sandboxed page's link and
+  form submits drive the browser). `run /work/browser.wasm` opens it in a
+  window. Each of fetch, sandbox, navigation, and resource-inlining is
+  headless-verified.
+- **Next — wire it into the visor.** The transport is already pluggable: a host
+  sets `globalThis.__shipyardBrowserFetch(url)` to route through its own network
+  (skywire's `fetchDmsg`). The remaining work is in skywire — embed the browser
+  wasm in `pkg/wasmhv/browseui` beside `WinBoxWasm`, have the visor page
+  instantiate it (with the dmsg transport) in place of `browse.js`, and verify
+  against a running visor. That's a skywire PR of its own, needing visor
+  runtime testing; richer transcoding (fonts, nested `@import`, XHR) layers on
+  the same relay.
 - **Lazy std + persistence.** Seed the standard library on demand and cache it
   (with the module cache) in IndexedDB via jsfs, so a reload is instant.
 
