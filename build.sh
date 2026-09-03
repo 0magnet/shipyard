@@ -5,8 +5,9 @@
 set -eu
 cd "$(dirname "$0")"
 
-echo "shipyard: building shipyard.wasm…"
+echo "shipyard: building shipyard.wasm + the demo programs…"
 GOOS=js GOARCH=wasm go build -o shipyard.wasm ./cmd/shipyard
+GOOS=js GOARCH=wasm go build -o browser.wasm ./cmd/browser
 
 # shipwright supplies the Go toolchain built for js/wasm and the bottle runtime
 # (jsfs.js / proc.js / wasm_exec.js). Build it from source next door.

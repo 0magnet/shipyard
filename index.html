@@ -27,7 +27,8 @@ window.addEventListener("error", function(e){ if(e.message && /already exited/.t
   log("seeding std source…");
   const std = await (await fetch("stdsrc.json")).json();
   let n=0; for(const p in std){ jsfs.writeFile(p, Uint8Array.from(atob(std[p]),c=>c.charCodeAt(0))); n++; }
-  log("seeded "+n+" std files, /bin/go, and the tools");
+  jsfs.writeFile("/work/browser.wasm", await fetchBytes("browser.wasm"), 0o755); // a Go/wasm browser, prebuilt
+  log("seeded "+n+" std files, /bin/go, the tools, and browser.wasm");
   jsfs.writeFile("/work/go.mod", "module hello\n\ngo 1.27\n");
   jsfs.writeFile("/work/main.go", "package main\n\nimport \"fmt\"\n\nfunc main(){ fmt.Println(\"hello, built in a shell in a tab\") }\n");
 
@@ -92,6 +93,12 @@ func main() {
     log("[diag] terminal tail: "+JSON.stringify(term0.slice(-160)));
     if (gsz>0 && windowUp) log("SHIPYARD-M3-MARKER: `run` opened a window and the built GUI program is drawing in it");
     else log("SHIPYARD-M3-FAIL: gui="+gsz+" windowUp="+windowUp);
+
+    // The Go/wasm browser: run it and confirm its chrome + iframe engine came up.
+    log("[selftest] run /work/browser.wasm"); window.__shipyardSubmit("run /work/browser.wasm");
+    const browserUp = await (async ()=>{ const t=Date.now(); while(Date.now()-t<20000){ const f=document.getElementById("browser-frame"); if(f && (f.getAttribute("src")||"").length>0) return f.getAttribute("src"); await new Promise(r=>setTimeout(r,300)); } return ""; })();
+    if (browserUp) log("SHIPYARD-BROWSER-MARKER: a Go/wasm browser is running; its iframe engine navigated to "+JSON.stringify(browserUp.slice(0,40)));
+    else log("SHIPYARD-BROWSER-FAIL");
     log("== selftest done ==");
   }
 })().catch(e => { document.getElementById("boot").textContent += "\nERROR "+e+"\n"+((e&&e.stack)||""); });

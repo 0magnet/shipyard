@@ -59,8 +59,14 @@ instantiating another wasm module.
   `$SHIPYARD_MOUNT`), so `go build -o clock.wasm . && run clock.wasm` opens a
   live UI. Headless-verified: build a GUI program in the terminal, run it, and
   a second window draws its output.
-- **Next — netscrape alongside.** A browser in the desk to view a vnet-served
-  result, and a Go/wasm port of netscrape so the browser compiles here too.
+- **✓ A browser, in Go.** `cmd/browser` is a minimal web browser written in
+  Go/wasm — the shape of a netscrape port: its chrome (address bar,
+  back/forward, reload) is DOM built from Go via `syscall/js`, its engine an
+  `<iframe>` Go points at a URL. `run /work/browser.wasm` opens it in a window.
+  Verified: the browser comes up and its iframe engine navigates.
+- **Next — full netscrape parity.** Tabs, the dmsg/clearnet transports, and
+  swapping this Go browser in for the JS netscrape (adapting skywire's wasm
+  visor at the same time).
 - **Lazy std + persistence.** Seed the standard library on demand and cache it
   (with the module cache) in IndexedDB via jsfs, so a reload is instant.
 - **netscrape in Go.** Its chrome is DOM work, its transport is Go (dmsg is
