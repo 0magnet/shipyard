@@ -298,7 +298,19 @@ func relayResource(source, id js.Value, url string) {
 
 func main() {
 	doc = js.Global().Get("document")
+	// The element to draw into: $SHIPYARD_MOUNT when spawned by shipyard's proc
+	// layer, or globalThis.__shipyardMount (an element id, or the element) when a
+	// host instantiates the module directly — e.g. skywire's visor page.
 	root := doc.Call("getElementById", os.Getenv("SHIPYARD_MOUNT"))
+	if !root.Truthy() {
+		if m := js.Global().Get("__shipyardMount"); m.Truthy() {
+			if m.Type() == js.TypeString {
+				root = doc.Call("getElementById", m.String())
+			} else {
+				root = m
+			}
+		}
+	}
 	if !root.Truthy() {
 		return
 	}
