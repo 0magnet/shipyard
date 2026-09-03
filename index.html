@@ -1,0 +1,57 @@
+<!doctype html><meta charset="utf-8"><title>shipyard — a Go workstation in a tab</title>
+<style>
+  html,body{margin:0;height:100%;background:#0e0c14;color:#cdd2da;font:13px/1.5 ui-monospace,monospace;overflow:hidden}
+  #desktop{position:absolute;inset:0}
+  #boot{position:absolute;left:1em;bottom:.6em;color:#7a8290;z-index:0;white-space:pre}
+</style>
+<div id="desktop"></div>
+<pre id="boot"></pre>
+<script src="jsfs.js"></script>
+<script src="wasm_exec.js"></script>
+<script src="proc.js"></script>
+<script>
+window.addEventListener("error", function(e){ if(e.message && /already exited/.test(e.message)){ e.preventDefault(); } });
+(async function(){
+  const boot = document.getElementById("boot");
+  const log = (l) => { boot.textContent += l + "\n"; try{console.log(l);}catch(_){} };
+  const fetchBytes = async (u) => new Uint8Array(await (await fetch(u)).arrayBuffer());
+
+  // Seed the shipwright toolchain into jsfs, where the shell will exec it.
+  jsfs.mkdirp("/bin"); jsfs.mkdirp("/goroot/pkg/tool/js_wasm");
+  jsfs.mkdirp("/gopath"); jsfs.mkdirp("/work"); jsfs.mkdirp("/root/.cache/go-build"); jsfs.mkdirp("/tmp");
+  jsfs.writeFile("/bin/go", await fetchBytes("go-proc.wasm"), 0o755);
+  jsfs.writeFile("/goroot/pkg/tool/js_wasm/compile", await fetchBytes("compile-proc.wasm"), 0o755);
+  jsfs.writeFile("/goroot/pkg/tool/js_wasm/link",    await fetchBytes("link-proc.wasm"),    0o755);
+  jsfs.writeFile("/goroot/pkg/tool/js_wasm/asm",     await fetchBytes("asm-proc.wasm"),     0o755);
+  jsfs.writeFile("/goroot/VERSION", "go1.27.0\n");
+  log("seeding std source…");
+  const std = await (await fetch("stdsrc.json")).json();
+  let n=0; for(const p in std){ jsfs.writeFile(p, Uint8Array.from(atob(std[p]),c=>c.charCodeAt(0))); n++; }
+  log("seeded "+n+" std files, /bin/go, and the tools");
+  jsfs.writeFile("/work/go.mod", "module hello\n\ngo 1.27\n");
+  jsfs.writeFile("/work/main.go", "package main\n\nimport \"fmt\"\n\nfunc main(){ fmt.Println(\"hello, built in a shell in a tab\") }\n");
+
+  window.__shipyardGOPROXY = location.origin + "/goproxy";
+
+  const ready = new Promise(res => { window.__shipyardReady = res; });
+  const go = new Go();
+  const {instance} = await WebAssembly.instantiate(await (await fetch("shipyard.wasm")).arrayBuffer(), go.importObject);
+  go.run(instance);
+  await ready;
+  log("terminal open — type a command, or `cd /work && go build .`");
+
+  // Optional headless self-test: drive commands in and read the terminal back.
+  if (location.hash === "#selftest") {
+    const term = () => document.querySelector("#desktop .wb-body").textContent || "";
+    const waitFor = async (re, ms) => { const t=Date.now(); while(Date.now()-t<ms){ if(re.test(term())) return true; await new Promise(r=>setTimeout(r,200)); } return false; };
+    const waitFile = async (p, ms) => { const t=Date.now(); while(Date.now()-t<ms){ const b=jsfs.readFile(p); if(b&&b.length>0) return b.length; await new Promise(r=>setTimeout(r,300)); } return 0; };
+    log("\n[selftest] go version"); window.__shipyardSubmit("go version");
+    log("[selftest] go version shown in terminal: " + (await waitFor(/go version go1\.27/, 60000)));
+    log("[selftest] cd /work && go build -o hello.wasm ."); window.__shipyardSubmit("cd /work && go build -o hello.wasm .");
+    const size = await waitFile("/work/hello.wasm", 240000); // poll the artifact, not the echoed line
+    if (size>0) log("SHIPYARD-M2-MARKER: the terminal built /work/hello.wasm ("+size+" bytes)");
+    else log("SHIPYARD-M2-FAIL: no binary after build");
+    log("== selftest done ==");
+  }
+})().catch(e => { document.getElementById("boot").textContent += "\nERROR "+e+"\n"+((e&&e.stack)||""); });
+</script>

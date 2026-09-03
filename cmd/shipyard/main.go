@@ -1,78 +1,74 @@
 //go:build js && wasm
 
-// Command shipyard boots a websh shell over bottle's jsfs — the same in-memory
-// filesystem the Go toolchain (shipwright) reads and writes — and puts `go` on
-// its PATH. From that shell, `go build` / `go install` run as child wasm
-// processes via bottle's proc layer: the terminal drives the toolchain, all in
-// the tab.
+// Command shipyard boots a browser workstation: a websh terminal in a winbox
+// window, its shell running over bottle's jsfs — the same in-memory filesystem
+// the Go toolchain (shipwright) reads and writes — with `go` on its PATH.
 //
-// This is milestone one: the shell and the toolchain share a filesystem and
-// exec across it. The interactive terminal window (websh's web.Session in a
-// winbox frame) and netscrape for viewing vnet-served output come next; here
-// the shell is driven through window.shipyardRun(cmd) so the wiring can be
-// exercised headlessly.
+// Type `go build` in the window and the toolchain runs as child wasm processes
+// via bottle's proc layer: the terminal drives the compiler, all in the tab.
+// window.__shipyardSubmit(line) feeds a command in without a keyboard, so the
+// wiring can be exercised headlessly.
 package main
 
 import (
-	"bytes"
-	"context"
-	"strings"
 	"syscall/js"
 
 	"github.com/0magnet/afero"
-	"github.com/0magnet/websh/shell"
+	"github.com/0magnet/websh/web"
+	winbox "github.com/0magnet/winbox-go"
 )
 
 func main() {
-	// afero.OsFs on js/wasm goes through the os package to syscall/fs_js.go to
-	// globalThis.fs — bottle's jsfs. So the shell and every process it spawns
-	// share one filesystem.
-	var out bytes.Buffer
-	sh, err := shell.New(afero.NewOsFs(), strings.NewReader(""), &out, &out)
+	doc := js.Global().Get("document")
+	winbox.InjectCSS()
+
+	// The environment the toolchain needs; the shell passes it to `go`, which
+	// passes it on to compile/asm/link. The page sets __shipyardGOPROXY when a
+	// module-proxy passthrough is available.
+	env := []string{
+		"GOROOT=/goroot", "GOPATH=/gopath", "HOME=/root", "TMPDIR=/tmp",
+		"GOCACHE=/root/.cache/go-build", "PATH=/bin:/goroot/pkg/tool/js_wasm",
+		"GOOS=js", "GOARCH=wasm", "GOFLAGS=-mod=mod", "GOTOOLCHAIN=local", "GO111MODULE=on",
+	}
+	if p := js.Global().Get("__shipyardGOPROXY"); p.Truthy() {
+		env = append(env, "GOPROXY="+p.String(), "GOSUMDB=sum.golang.org")
+	} else {
+		env = append(env, "GOPROXY=off", "GOSUMDB=off")
+	}
+
+	opts := &winbox.Options{
+		Title:  "shell — the Go toolchain is on your PATH",
+		Width:  winbox.Px(780),
+		Height: winbox.Px(480),
+		X:      winbox.Px(60),
+		Y:      winbox.Px(60),
+	}
+	if root := doc.Call("getElementById", "desktop"); root.Truthy() {
+		opts.Root = root
+	}
+	w := winbox.New(opts)
+
+	sess, err := web.NewSession(w.Body, web.Options{
+		FS:       afero.NewOsFs(), // == bottle's jsfs on js/wasm
+		Host:     "user@shipyard",
+		Greeting: "shipyard — go is on your PATH. Try:  go version   |   cd /work && go build .\r\n",
+		Env:      env,
+		NoWebGL:  true, // DOM renderer, so a headless check can read the buffer
+	})
 	if err != nil {
 		js.Global().Get("console").Call("error", "shipyard: "+err.Error())
 		return
 	}
-	ctx := context.Background()
 
-	// The environment the toolchain needs; the shell passes it to `go`, which
-	// passes it on to compile/asm/link. GOPROXY is set by the page if a
-	// passthrough is available.
-	env := "export GOROOT=/goroot GOPATH=/gopath HOME=/root TMPDIR=/tmp " +
-		"GOCACHE=/root/.cache/go-build PATH=/bin:/goroot/pkg/tool/js_wasm " +
-		"GOOS=js GOARCH=wasm GOFLAGS=-mod=mod GOTOOLCHAIN=local GO111MODULE=on"
-	if p := js.Global().Get("__shipyardGOPROXY"); p.Truthy() {
-		env += " GOPROXY=" + p.String() + " GOSUMDB=sum.golang.org"
-	} else {
-		env += " GOPROXY=off GOSUMDB=off"
-	}
-	if _, err := sh.Run(ctx, env); err != nil {
-		js.Global().Get("console").Call("error", "shipyard env: "+err.Error())
-	}
+	// Feed a command as if typed — for headless verification and scripting.
+	js.Global().Set("__shipyardSubmit", js.FuncOf(func(_ js.Value, a []js.Value) any {
+		if len(a) > 0 {
+			sess.Submit(a[0].String())
+		}
+		return nil
+	}))
 
-	// Run a shell line and resolve with its combined output. Runs on its own
-	// goroutine so a blocking build (which drives child wasm processes on the
-	// JS event loop) never blocks the caller's synchronous JS frame.
-	run := js.FuncOf(func(_ js.Value, args []js.Value) any {
-		line := args[0].String()
-		promise := js.Global().Get("Promise")
-		return promise.New(js.FuncOf(func(_ js.Value, pa []js.Value) any {
-			resolve := pa[0]
-			go func() {
-				out.Reset()
-				_, runErr := sh.Run(ctx, line)
-				text := out.String()
-				if runErr != nil {
-					text += "\n[shipyard: " + runErr.Error() + "]"
-				}
-				resolve.Invoke(text)
-			}()
-			return nil
-		}))
-	})
-	js.Global().Set("shipyardRun", run)
-
-	js.Global().Get("console").Call("log", "shipyard: shell ready on jsfs — go is on PATH")
+	js.Global().Get("console").Call("log", "shipyard: terminal window open — go is on PATH")
 	if r := js.Global().Get("__shipyardReady"); r.Truthy() {
 		r.Invoke()
 	}
