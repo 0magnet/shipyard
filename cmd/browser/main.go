@@ -26,6 +26,26 @@ const startPage = "data:text/html,<body style='font-family:sans-serif;padding:2e
 	"<h1>A browser, in Go</h1><p>The chrome is syscall/js. Each tab is an iframe. " +
 	"Use + for a new tab, or type a URL above.</p></body>"
 
+// navShim runs inside the sandboxed page. A sandboxed srcdoc has an opaque
+// origin and can't navigate itself across sites, so it relays intent to the
+// parent (this Go browser) via postMessage: link clicks and form GETs become a
+// {shipyardNav:<absolute url>} message, which the parent loads in the tab. This
+// is the seam a full port grows the fetch relay (lazy images, XHR) onto.
+const navShim = `<script>
+(function(){
+  function nav(u){ try{ parent.postMessage({shipyardNav:new URL(u,document.baseURI).href},"*"); }catch(e){} }
+  document.addEventListener("click",function(e){
+    var n=e.target; while(n && n.tagName!=="A") n=n.parentNode;
+    if(n && n.getAttribute("href")){ e.preventDefault(); nav(n.getAttribute("href")); }
+  },true);
+  document.addEventListener("submit",function(e){
+    var f=e.target; if(!f||f.tagName!=="FORM") return; e.preventDefault();
+    var q=[]; for(var i=0;i<f.elements.length;i++){ var el=f.elements[i]; if(el.name) q.push(encodeURIComponent(el.name)+"="+encodeURIComponent(el.value||"")); }
+    var a=f.getAttribute("action")||""; nav(a+(a.indexOf("?")<0?"?":"&")+q.join("&"));
+  },true);
+})();
+</script>`
+
 var (
 	doc    js.Value
 	strip  js.Value // tab strip
@@ -95,7 +115,7 @@ func fetchPage(t *tab, url string) {
 		html := a[0].String()
 		t.frame.Call("removeAttribute", "src")
 		t.frame.Call("setAttribute", "sandbox", "allow-scripts") // sandboxed: no allow-same-origin
-		t.frame.Set("srcdoc", "<base href=\""+url+"\">"+html)
+		t.frame.Set("srcdoc", "<base href=\""+url+"\">"+navShim+html)
 		onResp.Release()
 		onText.Release()
 		onErr.Release()
@@ -251,6 +271,23 @@ func main() {
 	addr.Call("addEventListener", "keydown", js.FuncOf(func(_ js.Value, a []js.Value) any {
 		if len(a) > 0 && a[0].Get("key").String() == "Enter" {
 			navigate(cur(), addr.Get("value").String())
+		}
+		return nil
+	}))
+
+	// The relay: a sandboxed page's navShim posts navigation intent here.
+	js.Global().Call("addEventListener", "message", js.FuncOf(func(_ js.Value, a []js.Value) any {
+		if len(a) == 0 {
+			return nil
+		}
+		data := a[0].Get("data")
+		if data.Type() != js.TypeObject {
+			return nil
+		}
+		if nav := data.Get("shipyardNav"); nav.Truthy() {
+			if t := cur(); t != nil {
+				navigate(t, nav.String())
+			}
 		}
 		return nil
 	}))
