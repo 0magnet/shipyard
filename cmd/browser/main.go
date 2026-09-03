@@ -16,6 +16,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"os"
 	"strconv"
 	"strings"
@@ -33,7 +34,8 @@ const startPage = "data:text/html,<body style='font-family:sans-serif;padding:2e
 // is the seam a full port grows the fetch relay (lazy images, XHR) onto.
 const navShim = `<script>
 (function(){
-  function nav(u){ try{ parent.postMessage({shipyardNav:new URL(u,document.baseURI).href},"*"); }catch(e){} }
+  function abs(u){ try{ return new URL(u,document.baseURI).href; }catch(e){ return u; } }
+  function nav(u){ try{ parent.postMessage({shipyardNav:abs(u)},"*"); }catch(e){} }
   document.addEventListener("click",function(e){
     var n=e.target; while(n && n.tagName!=="A") n=n.parentNode;
     if(n && n.getAttribute("href")){ e.preventDefault(); nav(n.getAttribute("href")); }
@@ -43,6 +45,27 @@ const navShim = `<script>
     var q=[]; for(var i=0;i<f.elements.length;i++){ var el=f.elements[i]; if(el.name) q.push(encodeURIComponent(el.name)+"="+encodeURIComponent(el.value||"")); }
     var a=f.getAttribute("action")||""; nav(a+(a.indexOf("?")<0?"?":"&")+q.join("&"));
   },true);
+
+  // Resource relay: the sandbox can't reach the proxy itself, so it asks the
+  // parent to fetch each stylesheet/image and hands back the bytes. CSS is
+  // inlined as <style>, images as data: URIs.
+  var fid=0, pend={};
+  function get(u){ return new Promise(function(res){ var id=++fid; pend[id]=res; parent.postMessage({shipyardFetch:{id:id,url:abs(u)}},"*"); }); }
+  window.addEventListener("message",function(e){
+    var d=e.data; if(!d||!d.shipyardFetchResult) return;
+    var r=d.shipyardFetchResult, cb=pend[r.id]; if(cb){ delete pend[r.id]; cb(r); }
+  });
+  function b64utf8(b){ try{ return decodeURIComponent(escape(atob(b))); }catch(e){ return atob(b); } }
+  function inline(){
+    document.querySelectorAll('link[rel~="stylesheet"][href]').forEach(function(l){
+      get(l.getAttribute("href")).then(function(r){ if(r&&r.ok){ var s=document.createElement("style"); s.textContent=b64utf8(r.b64); l.parentNode.replaceChild(s,l); } });
+    });
+    document.querySelectorAll('img[src]').forEach(function(im){
+      var s=im.getAttribute("src"); if(!s||/^data:/.test(s)) return;
+      get(s).then(function(r){ if(r&&r.ok){ im.src="data:"+(r.ct||"application/octet-stream")+";base64,"+r.b64; } });
+    });
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",inline); else inline();
 })();
 </script>`
 
@@ -217,6 +240,49 @@ func rebindClicks() {
 	}
 }
 
+// relayResource fetches a resource through the /fetch proxy on the sandbox's
+// behalf and posts the bytes back (base64) to the requesting iframe window.
+func relayResource(source, id js.Value, url string) {
+	g := js.Global()
+	reply := func(ok bool, ct, b64 string) {
+		res := g.Get("Object").New()
+		res.Set("id", id)
+		res.Set("ok", ok)
+		res.Set("ct", ct)
+		res.Set("b64", b64)
+		msg := g.Get("Object").New()
+		msg.Set("shipyardFetchResult", res)
+		source.Call("postMessage", msg, "*")
+	}
+	enc := g.Get("encodeURIComponent").Invoke(url).String()
+	var onResp, onBuf, onErr js.Func
+	ct := ""
+	onErr = js.FuncOf(func(_ js.Value, _ []js.Value) any {
+		reply(false, "", "")
+		onResp.Release()
+		onBuf.Release()
+		onErr.Release()
+		return nil
+	})
+	onBuf = js.FuncOf(func(_ js.Value, a []js.Value) any {
+		u8 := g.Get("Uint8Array").New(a[0])
+		b := make([]byte, u8.Get("length").Int())
+		js.CopyBytesToGo(b, u8)
+		reply(true, ct, base64.StdEncoding.EncodeToString(b))
+		onResp.Release()
+		onBuf.Release()
+		onErr.Release()
+		return nil
+	})
+	onResp = js.FuncOf(func(_ js.Value, a []js.Value) any {
+		if h := a[0].Get("headers").Call("get", "content-type"); h.Truthy() {
+			ct = h.String()
+		}
+		return a[0].Call("arrayBuffer")
+	})
+	g.Call("fetch", "/fetch?url="+enc).Call("then", onResp).Call("then", onBuf).Call("catch", onErr)
+}
+
 func main() {
 	doc = js.Global().Get("document")
 	root := doc.Call("getElementById", os.Getenv("SHIPYARD_MOUNT"))
@@ -288,6 +354,9 @@ func main() {
 			if t := cur(); t != nil {
 				navigate(t, nav.String())
 			}
+		}
+		if fr := data.Get("shipyardFetch"); fr.Truthy() {
+			relayResource(a[0].Get("source"), fr.Get("id"), fr.Get("url").String())
 		}
 		return nil
 	}))

@@ -89,6 +89,7 @@ func main() {
 			http.Error(w, "missing url", http.StatusBadRequest)
 			return
 		}
+		log.Printf("fetch %s", target)
 		resp, err := webClient.Get(target)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
