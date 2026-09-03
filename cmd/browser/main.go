@@ -9,10 +9,12 @@
 // It runs as a shipyard program — it draws into the element named by
 // $SHIPYARD_MOUNT — so `run browser.wasm` opens a browser in its own window.
 //
-// What a full netscrape port still needs on top of this: the transcoding
-// engine that inlines a fetched page's resources into a sandboxed iframe (the
-// bulk of browse.js), and the clearnet/dmsg transports feeding it. The
-// transport seam is `fetchPage` below.
+// It fetches over a pluggable transport (fetchVia — /fetch by default, a
+// host-injected mesh fetch when present), renders pages in a sandboxed srcdoc,
+// relays their navigation and resource fetches back through the parent, and
+// inlines stylesheets and images. What full netscrape parity still wants: the
+// dmsg transport wired in by a host, and richer transcoding (fonts, nested
+// @import, XHR).
 package main
 
 import (
@@ -87,6 +89,20 @@ type tab struct {
 
 func mk(tag string) js.Value { return doc.Call("createElement", tag) }
 
+// fetchVia is the transport seam. A host can inject
+// globalThis.__shipyardBrowserFetch(url) → a Response-like promise (with
+// .text()/.arrayBuffer()/.headers) to route through its own network — this is
+// where skywire's wasm visor plugs in its dmsg mesh fetch. Absent one, the
+// browser uses the same-origin /fetch clearnet proxy.
+func fetchVia(url string) js.Value {
+	g := js.Global()
+	if t := g.Get("__shipyardBrowserFetch"); t.Type() == js.TypeFunction {
+		return t.Invoke(url)
+	}
+	enc := g.Get("encodeURIComponent").Invoke(url).String()
+	return g.Call("fetch", "/fetch?url="+enc)
+}
+
 func btn(label, style string) js.Value {
 	b := mk("button")
 	b.Set("textContent", label)
@@ -116,8 +132,6 @@ func load(t *tab, url string) {
 // images, and the shims that relay the sandboxed page's navigation and fetches
 // back through the transport — layers on top of this seam.
 func fetchPage(t *tab, url string) {
-	g := js.Global()
-	enc := g.Get("encodeURIComponent").Invoke(url).String()
 	fail := func(msg string) {
 		t.frame.Call("removeAttribute", "src")
 		t.frame.Set("srcdoc", "<body style='font:14px sans-serif;padding:2em;color:#a33'>"+msg+"</body>")
@@ -145,7 +159,7 @@ func fetchPage(t *tab, url string) {
 		return nil
 	})
 	onResp = js.FuncOf(func(_ js.Value, a []js.Value) any { return a[0].Call("text") })
-	g.Call("fetch", "/fetch?url="+enc).Call("then", onResp).Call("then", onText).Call("catch", onErr)
+	fetchVia(url).Call("then", onResp).Call("then", onText).Call("catch", onErr)
 }
 
 func navigate(t *tab, url string) {
@@ -254,7 +268,6 @@ func relayResource(source, id js.Value, url string) {
 		msg.Set("shipyardFetchResult", res)
 		source.Call("postMessage", msg, "*")
 	}
-	enc := g.Get("encodeURIComponent").Invoke(url).String()
 	var onResp, onBuf, onErr js.Func
 	ct := ""
 	onErr = js.FuncOf(func(_ js.Value, _ []js.Value) any {
@@ -280,7 +293,7 @@ func relayResource(source, id js.Value, url string) {
 		}
 		return a[0].Call("arrayBuffer")
 	})
-	g.Call("fetch", "/fetch?url="+enc).Call("then", onResp).Call("then", onBuf).Call("catch", onErr)
+	fetchVia(url).Call("then", onResp).Call("then", onBuf).Call("catch", onErr)
 }
 
 func main() {
