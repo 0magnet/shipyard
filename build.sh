@@ -15,7 +15,9 @@ if [ ! -d .shipwright ]; then
 else
 	( cd .shipwright && git pull -q --ff-only )
 fi
-( cd .shipwright && ./build.sh )
+# A workstation builds anything, so seed the whole standard library (stdsrc.sh
+# all), not just the demo closure — any program you compile has its imports.
+( cd .shipwright && ./build.sh && ./stdsrc.sh all )
 
 for f in go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm \
          stdsrc.json jsfs.js proc.js wasm_exec.js; do

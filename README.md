@@ -14,7 +14,7 @@ The pieces, and who does what:
 - **netscrape** — the browser, for viewing what you serve on the vnet.
 - **winbox-go** — the windowing the desk is made of.
 
-## What works today (milestones 1–2)
+## What works today (milestones 1–3)
 
 **A terminal window where you type `go build`.** shipyard opens a websh terminal
 in a [winbox](https://github.com/0magnet/winbox-go) window, its shell running
@@ -52,12 +52,15 @@ instantiating another wasm module.
 
 ## Roadmap
 
-- **✓ Milestone 2 — the terminal window.** Done: websh's `web.Session` mounted
-  in a winbox window, `go build` typed at the prompt. Still to add here:
-  netscrape alongside, to view a vnet-served result in the same desk.
-- **Milestone 3 — run what you build.** Launch a compiled DOM/wasm program in
-  its own window (instantiate `/work/<bin>` against a window's element), so
-  `go build && ./thing` opens a UI.
+- **✓ Milestone 2 — the terminal window.** websh's `web.Session` in a winbox
+  window, `go build` typed at the prompt.
+- **✓ Milestone 3 — run what you build.** The `run` command spawns a compiled
+  wasm program into its own winbox window (its mount element id arrives in
+  `$SHIPYARD_MOUNT`), so `go build -o clock.wasm . && run clock.wasm` opens a
+  live UI. Headless-verified: build a GUI program in the terminal, run it, and
+  a second window draws its output.
+- **Next — netscrape alongside.** A browser in the desk to view a vnet-served
+  result, and a Go/wasm port of netscrape so the browser compiles here too.
 - **Lazy std + persistence.** Seed the standard library on demand and cache it
   (with the module cache) in IndexedDB via jsfs, so a reload is instant.
 - **netscrape in Go.** Its chrome is DOM work, its transport is Go (dmsg is

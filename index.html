@@ -31,6 +31,34 @@ window.addEventListener("error", function(e){ if(e.message && /already exited/.t
   jsfs.writeFile("/work/go.mod", "module hello\n\ngo 1.27\n");
   jsfs.writeFile("/work/main.go", "package main\n\nimport \"fmt\"\n\nfunc main(){ fmt.Println(\"hello, built in a shell in a tab\") }\n");
 
+  // A GUI program to build and `run` in its own window. It draws into the
+  // element whose id arrives in $SHIPYARD_MOUNT (set by the run command).
+  jsfs.mkdirp("/work/gui");
+  jsfs.writeFile("/work/gui/go.mod", "module gui\n\ngo 1.27\n");
+  jsfs.writeFile("/work/gui/main.go", `//go:build js && wasm
+package main
+
+import (
+	"os"
+	"syscall/js"
+	"time"
+)
+
+func main() {
+	el := js.Global().Get("document").Call("getElementById", os.Getenv("SHIPYARD_MOUNT"))
+	if !el.Truthy() {
+		return
+	}
+	el.Get("style").Set("cssText", "font:22px ui-monospace,monospace;color:#9d7cff;display:flex;align-items:center;justify-content:center;height:100%;background:#0e0c14;text-align:center")
+	tick := func() { el.Set("textContent", "built & running in a window—"+time.Now().Format("15:04:05")) }
+	tick()
+	var f js.Func
+	f = js.FuncOf(func(js.Value, []js.Value) any { tick(); js.Global().Call("setTimeout", f, 1000); return nil })
+	js.Global().Call("setTimeout", f, 1000)
+	select {}
+}
+`);
+
   window.__shipyardGOPROXY = location.origin + "/goproxy";
 
   const ready = new Promise(res => { window.__shipyardReady = res; });
@@ -51,6 +79,19 @@ window.addEventListener("error", function(e){ if(e.message && /already exited/.t
     const size = await waitFile("/work/hello.wasm", 240000); // poll the artifact, not the echoed line
     if (size>0) log("SHIPYARD-M2-MARKER: the terminal built /work/hello.wasm ("+size+" bytes)");
     else log("SHIPYARD-M2-FAIL: no binary after build");
+
+    // M3: build a GUI program and run it in its own window.
+    log("[selftest] cd /work/gui && go build -o clock.wasm ."); window.__shipyardSubmit("cd /work/gui && go build -o clock.wasm .");
+    const gsz = await waitFile("/work/gui/clock.wasm", 240000);
+    log("[selftest] clock.wasm built: "+gsz+" bytes; run clock.wasm"); window.__shipyardSubmit("run clock.wasm");
+    const windowUp = await (async ()=>{ const t=Date.now(); while(Date.now()-t<30000){ const el=document.getElementById("shipyard-app-1"); if(el && /\d\d:\d\d:\d\d/.test(el.textContent||"")) return true; await new Promise(r=>setTimeout(r,300)); } return false; })();
+    // diagnostics
+    const bodies = document.querySelectorAll("#desktop .wb-body");
+    log("[diag] .wb-body count: "+bodies.length+"; #shipyard-app-1 exists: "+!!document.getElementById("shipyard-app-1")+"; its text: "+JSON.stringify((document.getElementById("shipyard-app-1")||{}).textContent||""));
+    const term0 = bodies[0] ? bodies[0].textContent : "";
+    log("[diag] terminal tail: "+JSON.stringify(term0.slice(-160)));
+    if (gsz>0 && windowUp) log("SHIPYARD-M3-MARKER: `run` opened a window and the built GUI program is drawing in it");
+    else log("SHIPYARD-M3-FAIL: gui="+gsz+" windowUp="+windowUp);
     log("== selftest done ==");
   }
 })().catch(e => { document.getElementById("boot").textContent += "\nERROR "+e+"\n"+((e&&e.stack)||""); });
