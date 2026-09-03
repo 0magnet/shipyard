@@ -1,0 +1,49 @@
+<!doctype html><meta charset="utf-8"><title>shipyard — the shell drives go</title>
+<pre id="log" style="background:#0e0c14;color:#cdd2da;font:13px/1.5 monospace;padding:1em"></pre>
+<script src="jsfs.js"></script>
+<script src="wasm_exec.js"></script>
+<script src="proc.js"></script>
+<script>
+// A late timer from an exited child can surface as "already exited"; proc.js
+// swallows the resume, so drop the noise here.
+window.addEventListener("error", function(e){ if(e.message && /already exited/.test(e.message)){ e.preventDefault(); } });
+(async function(){
+  const logEl = document.getElementById("log");
+  const log = (l) => { logEl.textContent += l + "\n"; try{console.log(l);}catch(_){} };
+  const fetchBytes = async (u) => new Uint8Array(await (await fetch(u)).arrayBuffer());
+
+  // Seed the shipwright toolchain into jsfs, where the shell will exec it.
+  jsfs.mkdirp("/bin"); jsfs.mkdirp("/goroot/pkg/tool/js_wasm");
+  jsfs.mkdirp("/gopath"); jsfs.mkdirp("/work"); jsfs.mkdirp("/root/.cache/go-build"); jsfs.mkdirp("/tmp");
+  jsfs.writeFile("/bin/go", await fetchBytes("go-proc.wasm"), 0o755);
+  jsfs.writeFile("/goroot/pkg/tool/js_wasm/compile", await fetchBytes("compile-proc.wasm"), 0o755);
+  jsfs.writeFile("/goroot/pkg/tool/js_wasm/link",    await fetchBytes("link-proc.wasm"),    0o755);
+  jsfs.writeFile("/goroot/pkg/tool/js_wasm/asm",     await fetchBytes("asm-proc.wasm"),     0o755);
+  jsfs.writeFile("/goroot/VERSION", "go1.27.0\n");
+  log("seeding std source…");
+  const std = await (await fetch("stdsrc.json")).json();
+  let n=0; for(const p in std){ jsfs.writeFile(p, Uint8Array.from(atob(std[p]),c=>c.charCodeAt(0))); n++; }
+  log("seeded "+n+" std files, /bin/go, and the tools\n");
+
+  // A program to build from the shell.
+  jsfs.writeFile("/work/go.mod", "module hello\n\ngo 1.27\n");
+  jsfs.writeFile("/work/main.go", "package main\n\nimport \"fmt\"\n\nfunc main(){ fmt.Println(\"hello, built in a shell in a tab\") }\n");
+
+  window.__shipyardGOPROXY = location.origin + "/goproxy";
+
+  // Boot shipyard: the websh shell over jsfs, with go on PATH.
+  const ready = new Promise(res => { window.__shipyardReady = res; });
+  const go = new Go();
+  const {instance} = await WebAssembly.instantiate(await (await fetch("shipyard.wasm")).arrayBuffer(), go.importObject);
+  go.run(instance);
+  await ready;
+
+  async function sh(cmd){ log("$ "+cmd); const out = await window.shipyardRun(cmd); if(out) out.replace(/\n$/,"").split("\n").forEach(l=>log(l)); return out; }
+
+  await sh("go version");
+  await sh("go env GOROOT GOOS GOARCH");
+  await sh("cd /work && go build -o hello.wasm . && echo built hello.wasm");
+  await sh("ls -la /work");
+  log("\nThe shell just compiled a Go program with the real toolchain, in this tab.");
+})().catch(e => { const l=document.getElementById("log"); l.textContent += "\nERROR "+e+"\n"+((e&&e.stack)||""); });
+</script>
