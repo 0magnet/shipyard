@@ -110,15 +110,20 @@ func btn(label, style string) js.Value {
 	return b
 }
 
-// load renders a URL into a tab's iframe. An http(s) page goes through the
-// transport (fetchPage): fetched same-origin and rendered sandboxed. Anything
-// else (data:, about:, a relative path) is handed straight to the iframe.
+// load renders a URL into a tab's iframe. A data:/about:/blob: URL goes straight
+// to the iframe; anything else — an http(s) page, or a bare host like
+// example.com or home.dmsg — goes through the transport (fetchPage), which lets
+// the host's fetchVia decide clearnet vs mesh. A scheme-less address is
+// normalised to http:// so the transport always gets a URL.
 func load(t *tab, url string) {
-	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
-		fetchPage(t, url)
-	} else {
+	if strings.HasPrefix(url, "data:") || strings.HasPrefix(url, "about:") || strings.HasPrefix(url, "blob:") {
 		t.frame.Call("removeAttribute", "srcdoc")
 		t.frame.Set("src", url)
+	} else {
+		if !strings.Contains(url, "://") {
+			url = "http://" + url
+		}
+		fetchPage(t, url)
 	}
 	if active >= 0 && tabs[active] == t {
 		addr.Set("value", url)
