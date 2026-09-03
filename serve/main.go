@@ -78,6 +78,30 @@ func main() {
 	// module-proxy protocol path upstream expects.
 	mux.Handle("/goproxy/", http.StripPrefix("/goproxy", modFwd))
 
+	// /fetch?url=<absolute> is the browser's clearnet transport: the tab can't
+	// fetch cross-origin (CORS), so it asks its own origin to fetch the page and
+	// hands back the bytes same-origin. A dev-server convenience — an open
+	// forward proxy — not meant for exposure to untrusted callers.
+	webClient := &http.Client{}
+	mux.HandleFunc("/fetch", func(w http.ResponseWriter, r *http.Request) {
+		target := r.URL.Query().Get("url")
+		if target == "" {
+			http.Error(w, "missing url", http.StatusBadRequest)
+			return
+		}
+		resp, err := webClient.Get(target)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+		if ct := resp.Header.Get("Content-Type"); ct != "" {
+			w.Header().Set("Content-Type", ct)
+		}
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	})
+
 	mux.Handle("/", http.FileServer(http.Dir(*dir)))
 
 	log.Printf("shipwright: http://localhost%s  (/goproxy → %s, sumdb → %s)",

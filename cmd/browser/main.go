@@ -18,6 +18,7 @@ package main
 import (
 	"os"
 	"strconv"
+	"strings"
 	"syscall/js"
 )
 
@@ -50,14 +51,58 @@ func btn(label, style string) js.Value {
 	return b
 }
 
-// fetchPage is the transport seam. Direct mode just hands the URL to the
-// iframe; a full port would fetch here (clearnet over a proxy, or dmsg) and
-// return an inlined, sandboxed document for the iframe's srcdoc.
+// load renders a URL into a tab's iframe. An http(s) page goes through the
+// transport (fetchPage): fetched same-origin and rendered sandboxed. Anything
+// else (data:, about:, a relative path) is handed straight to the iframe.
 func load(t *tab, url string) {
-	t.frame.Set("src", url)
+	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
+		fetchPage(t, url)
+	} else {
+		t.frame.Call("removeAttribute", "srcdoc")
+		t.frame.Set("src", url)
+	}
 	if active >= 0 && tabs[active] == t {
 		addr.Set("value", url)
 	}
+}
+
+// fetchPage is the clearnet transport + first transcoding pass. It fetches the
+// page over the same-origin /fetch proxy (the tab can't reach it cross-origin),
+// then renders it as a sandboxed srcdoc with a <base> so the page's own
+// relative URLs resolve. The heavier transcoding — inlining stylesheets and
+// images, and the shims that relay the sandboxed page's navigation and fetches
+// back through the transport — layers on top of this seam.
+func fetchPage(t *tab, url string) {
+	g := js.Global()
+	enc := g.Get("encodeURIComponent").Invoke(url).String()
+	fail := func(msg string) {
+		t.frame.Call("removeAttribute", "src")
+		t.frame.Set("srcdoc", "<body style='font:14px sans-serif;padding:2em;color:#a33'>"+msg+"</body>")
+	}
+	var onResp, onText, onErr js.Func
+	onErr = js.FuncOf(func(_ js.Value, a []js.Value) any {
+		m := "fetch failed"
+		if len(a) > 0 {
+			m = a[0].Call("toString").String()
+		}
+		fail(m)
+		onResp.Release()
+		onText.Release()
+		onErr.Release()
+		return nil
+	})
+	onText = js.FuncOf(func(_ js.Value, a []js.Value) any {
+		html := a[0].String()
+		t.frame.Call("removeAttribute", "src")
+		t.frame.Call("setAttribute", "sandbox", "allow-scripts") // sandboxed: no allow-same-origin
+		t.frame.Set("srcdoc", "<base href=\""+url+"\">"+html)
+		onResp.Release()
+		onText.Release()
+		onErr.Release()
+		return nil
+	})
+	onResp = js.FuncOf(func(_ js.Value, a []js.Value) any { return a[0].Call("text") })
+	g.Call("fetch", "/fetch?url="+enc).Call("then", onResp).Call("then", onText).Call("catch", onErr)
 }
 
 func navigate(t *tab, url string) {
