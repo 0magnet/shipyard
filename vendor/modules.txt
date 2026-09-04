@@ -3,6 +3,9 @@
 github.com/0magnet/afero
 github.com/0magnet/afero/internal/common
 github.com/0magnet/afero/mem
+# github.com/0magnet/netscrape v0.0.0-20260904013017-798f6a02bb0b
+## explicit; go 1.24
+github.com/0magnet/netscrape
 # github.com/0magnet/sh/v3 v3.13.2-0.20260818190530-13d0024da85c
 ## explicit; go 1.25.0
 github.com/0magnet/sh/v3/expand
