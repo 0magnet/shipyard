@@ -6,4 +6,5 @@ jsfs.js
 proc.js
 wasm_exec.js
 .shipwright/
+_site/
 *.log

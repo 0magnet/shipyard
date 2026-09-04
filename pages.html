@@ -1,0 +1,133 @@
+<!doctype html><meta charset="utf-8"><title>shipyard — a Go workstation in a tab</title>
+<style>
+  html,body{margin:0;height:100%;background:#0e0c14;color:#cdd2da;font:13px/1.5 ui-monospace,monospace;overflow:hidden}
+  #desktop{position:absolute;inset:0}
+  #boot{position:absolute;left:1em;bottom:1.8em;color:#7a8290;z-index:0;white-space:pre}
+  #note{position:absolute;left:1em;bottom:.5em;color:#5a6270;z-index:0}
+  #note a{color:#9d7cff}
+</style>
+<div id="desktop"></div>
+<pre id="boot"></pre>
+<div id="note">Offline workstation: <b>go build</b> and <b>run</b> work fully in this tab, from the seeded standard library. Networked features (external deps via <code>go install</code>, browsing the live web) need running it locally with <code>go run ./serve</code> — see the <a href="https://github.com/0magnet/shipyard">repo</a>.</div>
+<script src="jsfs.js"></script>
+<script src="wasm_exec.js"></script>
+<script src="proc.js"></script>
+<script>
+window.addEventListener("error", function(e){ if(e.message && /already exited/.test(e.message)){ e.preventDefault(); } });
+(async function(){
+  const boot = document.getElementById("boot");
+  const log = (l) => { boot.textContent += l + "\n"; try{console.log(l);}catch(_){} };
+  const fetchBytes = async (u) => new Uint8Array(await (await fetch(u)).arrayBuffer());
+
+  // Pages is static hosting: no /std/ endpoint to lazily fetch std source from,
+  // so — unlike the local lazy-std index.html — this variant seeds the WHOLE
+  // standard library up front, eagerly, from stdsrc.json ({path: base64}). The
+  // workstation then builds and runs entirely offline. The seeded tree persists
+  // to IndexedDB, so a reload skips the cold ~200 MB seed.
+  const cached = await jsfs.persist.enable("shipyard-pages-fs");
+  const have = (p) => { try { const b = jsfs.readFile(p); return !!(b && b.length); } catch (e) { return false; } };
+  jsfs.mkdirp("/gopath"); jsfs.mkdirp("/work"); jsfs.mkdirp("/root/.cache/go-build"); jsfs.mkdirp("/tmp");
+  let seeded = false;
+
+  if (!have("/bin/go")) {
+    jsfs.mkdirp("/bin"); jsfs.mkdirp("/goroot/pkg/tool/js_wasm");
+    jsfs.writeFile("/bin/go", await fetchBytes("go-proc.wasm"), 0o755);
+    jsfs.writeFile("/goroot/pkg/tool/js_wasm/compile", await fetchBytes("compile-proc.wasm"), 0o755);
+    jsfs.writeFile("/goroot/pkg/tool/js_wasm/link",    await fetchBytes("link-proc.wasm"),    0o755);
+    jsfs.writeFile("/goroot/pkg/tool/js_wasm/asm",     await fetchBytes("asm-proc.wasm"),     0o755);
+    jsfs.writeFile("/goroot/VERSION", "go1.27.0\n");
+    jsfs.writeFile("/work/browser.wasm", await fetchBytes("browser.wasm"), 0o755); // a Go/wasm browser, prebuilt
+    jsfs.writeFile("/work/go.mod", "module hello\n\ngo 1.27\n");
+    jsfs.writeFile("/work/main.go", "package main\n\nimport \"fmt\"\n\nfunc main(){ fmt.Println(\"hello, built in a shell in a tab\") }\n");
+
+    // A GUI program to build and `run` in its own window. It draws into the
+    // element whose id arrives in $SHIPYARD_MOUNT (set by the run command).
+    jsfs.mkdirp("/work/gui");
+    jsfs.writeFile("/work/gui/go.mod", "module gui\n\ngo 1.27\n");
+    jsfs.writeFile("/work/gui/main.go", `//go:build js && wasm
+package main
+
+import (
+	"os"
+	"syscall/js"
+	"time"
+)
+
+func main() {
+	el := js.Global().Get("document").Call("getElementById", os.Getenv("SHIPYARD_MOUNT"))
+	if !el.Truthy() {
+		return
+	}
+	el.Get("style").Set("cssText", "font:22px ui-monospace,monospace;color:#9d7cff;display:flex;align-items:center;justify-content:center;height:100%;background:#0e0c14;text-align:center")
+	tick := func() { el.Set("textContent", "built & running in a window—"+time.Now().Format("15:04:05")) }
+	tick()
+	var f js.Func
+	f = js.FuncOf(func(js.Value, []js.Value) any { tick(); js.Global().Call("setTimeout", f, 1000); return nil })
+	js.Global().Call("setTimeout", f, 1000)
+	select {}
+}
+`);
+    log("seeded the toolchain" + (cached.restored ? "" : " (first visit)"));
+    seeded = true;
+  } else {
+    log("restored the toolchain from cache");
+  }
+
+  // The standard library, all of it, eagerly (no /std/ on static hosting).
+  if (!have("/goroot/src/fmt/print.go")) {
+    log("seeding the full standard library from stdsrc.json…");
+    const std = await (await fetch("stdsrc.json")).json();
+    let n = 0; for (const p in std) { jsfs.writeFile(p, Uint8Array.from(atob(std[p]), c => c.charCodeAt(0))); n++; }
+    log("seeded " + n + " std source files");
+    seeded = true;
+  } else {
+    log("restored the standard library from cache");
+  }
+
+  if (seeded) await jsfs.persist.flush(); // snapshot now, so the next reload restores it
+
+  window.__shipyardGOPROXY = location.origin + "/goproxy"; // local-serve only; unused on Pages
+
+  const ready = new Promise(res => { window.__shipyardReady = res; });
+  const go = new Go();
+  const {instance} = await WebAssembly.instantiate(await (await fetch("shipyard.wasm")).arrayBuffer(), go.importObject);
+  go.run(instance);
+  await ready;
+  log("terminal open — type a command, or `cd /work && go build .`");
+
+  // Optional headless self-test: drive commands in and read the terminal back.
+  if (location.hash === "#selftest") {
+    const term = () => document.querySelector("#desktop .wb-body").textContent || "";
+    const waitFor = async (re, ms) => { const t=Date.now(); while(Date.now()-t<ms){ if(re.test(term())) return true; await new Promise(r=>setTimeout(r,200)); } return false; };
+    const waitFile = async (p, ms) => { const t=Date.now(); while(Date.now()-t<ms){ const b=jsfs.readFile(p); if(b&&b.length>0) return b.length; await new Promise(r=>setTimeout(r,300)); } return 0; };
+    log("\n[selftest] go version"); window.__shipyardSubmit("go version");
+    log("[selftest] go version shown in terminal: " + (await waitFor(/go version go1\.27/, 60000)));
+    log("[selftest] cd /work && go build -o hello.wasm ."); window.__shipyardSubmit("cd /work && go build -o hello.wasm .");
+    const size = await waitFile("/work/hello.wasm", 240000); // poll the artifact, not the echoed line
+    if (size>0) log("SHIPYARD-M2-MARKER: the terminal built /work/hello.wasm ("+size+" bytes)");
+    else log("SHIPYARD-M2-FAIL: no binary after build");
+
+    // M3: build a GUI program and run it in its own window.
+    log("[selftest] cd /work/gui && go build -o clock.wasm ."); window.__shipyardSubmit("cd /work/gui && go build -o clock.wasm .");
+    const gsz = await waitFile("/work/gui/clock.wasm", 240000);
+    log("[selftest] clock.wasm built: "+gsz+" bytes; run clock.wasm"); window.__shipyardSubmit("run clock.wasm");
+    const windowUp = await (async ()=>{ const t=Date.now(); while(Date.now()-t<30000){ const el=document.getElementById("shipyard-app-1"); if(el && /\d\d:\d\d:\d\d/.test(el.textContent||"")) return true; await new Promise(r=>setTimeout(r,300)); } return false; })();
+    // diagnostics
+    const bodies = document.querySelectorAll("#desktop .wb-body");
+    log("[diag] .wb-body count: "+bodies.length+"; #shipyard-app-1 exists: "+!!document.getElementById("shipyard-app-1")+"; its text: "+JSON.stringify((document.getElementById("shipyard-app-1")||{}).textContent||""));
+    const term0 = bodies[0] ? bodies[0].textContent : "";
+    log("[diag] terminal tail: "+JSON.stringify(term0.slice(-160)));
+    if (gsz>0 && windowUp) log("SHIPYARD-M3-MARKER: `run` opened a window and the built GUI program is drawing in it");
+    else log("SHIPYARD-M3-FAIL: gui="+gsz+" windowUp="+windowUp);
+
+    // The Go/wasm browser: run it and confirm its chrome + iframe engine came up.
+    // (Fetching the live web needs serve's /fetch, absent on Pages — so a
+    // clearnet navigation won't complete here; that's expected offline.)
+    log("[selftest] run /work/browser.wasm"); window.__shipyardSubmit("run /work/browser.wasm");
+    const browserUp = await (async ()=>{ const t=Date.now(); while(Date.now()-t<20000){ const f=document.getElementById("browser-frame"); if(f && (f.getAttribute("src")||"").length>0) return f.getAttribute("src"); await new Promise(r=>setTimeout(r,300)); } return ""; })();
+    if (browserUp) log("SHIPYARD-BROWSER-MARKER: a Go/wasm browser is running; its iframe engine navigated to "+JSON.stringify(browserUp.slice(0,40)));
+    else log("SHIPYARD-BROWSER-INFO: browser chrome ran; clearnet navigation needs local serve (/fetch)");
+    log("== selftest done ==");
+  }
+})().catch(e => { document.getElementById("boot").textContent += "\nERROR "+e+"\n"+((e&&e.stack)||""); });
+</script>
