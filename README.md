@@ -35,10 +35,41 @@ whole module graph, fetched over a `/goproxy` passthrough. In shipyard you type
 it at a prompt.
 
 `index.html` is the desk: it seeds the toolchain into jsfs, opens the terminal
-window, and lets you type. Open it with `#selftest` and it drives `go version`
-and `go build` in and checks the artifact — the headless proof. `demo.html` is
+window, and lets you type. Open it with `#selftest` and it runs the whole demo
+gallery headlessly, checking each marker — the headless proof. `demo.html` is
 the same wiring without a window (the shell driven through a JS call), kept as
 the minimal read. Build and serve with `./build.sh` (see below).
+
+## The gallery — "What the Go Playground can't do"
+
+The desk carries a launcher dock (top right, on both `index.html` and the
+static Pages `pages.html`) of small self-contained Go programs, each
+demonstrating a capability the Go Playground fundamentally lacks and each
+captioned with the limitation it breaks. Every one runs **fully client-side**:
+no server, no `/fetch`, no `/goproxy`, no `/std` — so all of them work on static
+GitHub Pages. `demos.js` is the single source of truth (the gallery UI and the
+`#selftest` harness share it), and each demo confirms its own
+`SHIPYARD-<CAP>-MARKER` line:
+
+| Demo | The Playground limitation it breaks |
+| --- | --- |
+| **Filesystem** (`fs.wasm`) | no filesystem — nowhere to write a file |
+| **Persistence** (`jsfs.persist`) | keeps nothing; every run starts from scratch — here a file survives a page reload via IndexedDB |
+| **Processes & pipes** (`procparent.wasm` + child) | can't spawn a process — no child, no pipe, no exit code |
+| **Real clock & concurrency** (`timeconc.wasm`) | fakes the clock and caps goroutine time — here goroutines finish in real order on the real wall clock |
+| **Shell: stdin + pipes + jq** | no stdin and no shell — here `echo … \| jq` is a real pipeline |
+| **Go client ↔ Go server over vnet** (`netclient.wasm`) | no network at all — here a Go `net/http` client fetches from a Go `net/http` server, both in-tab, over bottle's virtual loopback |
+| **Browse an in-tab server** (netscrape) | can't run a server, a browser, or a network — here the Go/wasm browser renders a page the in-tab server serves over vnet |
+| **Graphical animated window** (`gui.wasm`) | text-stdout only — here a Go program draws an animated clock on a `<canvas>` |
+| **Compile & run Go in the tab** | compiles one file server-side — here `go build` runs in the tab and the result runs too |
+| **Compile & run a test** (`go test -c`) | runs a program, not a test binary — here the toolchain compiles a test binary and proc runs it to `PASS` |
+
+The programs live in one self-contained module (`demo/`, module `demo`) whose
+only non-std imports are its own copies of bottle's `vnet` and `proc` drop-ins,
+so each builds offline from the seeded standard library. Their source is seeded
+at `/work/demo`, viewable and rebuildable in the desk:
+
+    cd /work/demo && go build -o /work/server.wasm ./server && run server.wasm
 
 ## How the shell execs the toolchain
 

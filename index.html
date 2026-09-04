@@ -10,6 +10,7 @@
 <script src="wasm_exec.js"></script>
 <script src="proc.js"></script>
 <script src="vnet.js"></script>
+<script src="demos.js"></script>
 <script>
 window.addEventListener("error", function(e){ if(e.message && /already exited/.test(e.message)){ e.preventDefault(); } });
 // Transport seam for the netscrape browser (globalThis.__netscrapeFetch). A
@@ -51,49 +52,30 @@ window.__netscrapeFetch = function(url){
   jsfs.writeFile("/goroot/pkg/tool/js_wasm/compile", await fetchBytes("compile-proc.wasm"), 0o755);
   jsfs.writeFile("/goroot/pkg/tool/js_wasm/link",    await fetchBytes("link-proc.wasm"),    0o755);
   jsfs.writeFile("/goroot/pkg/tool/js_wasm/asm",     await fetchBytes("asm-proc.wasm"),     0o755);
+  jsfs.writeFile("/goroot/pkg/tool/js_wasm/vet",     await fetchBytes("vet-proc.wasm"),     0o755); // so `go test` can run vet
   jsfs.writeFile("/goroot/VERSION", "go1.27.0\n");
   jsfs.writeFile("/work/browser.wasm", await fetchBytes("browser.wasm"), 0o755); // a Go/wasm browser, prebuilt
   jsfs.writeFile("/work/server.wasm", await fetchBytes("server.wasm"), 0o755);   // a Go net/http server on vnet, prebuilt
   jsfs.writeFile("/work/go.mod", "module hello\n\ngo 1.27\n");
   jsfs.writeFile("/work/main.go", "package main\n\nimport \"fmt\"\n\nfunc main(){ fmt.Println(\"hello, built in a shell in a tab\") }\n");
 
-  // A GUI program to build and `run` in its own window. It draws into the
-  // element whose id arrives in $SHIPYARD_MOUNT (set by the run command).
-  jsfs.mkdirp("/work/gui");
-  jsfs.writeFile("/work/gui/go.mod", "module gui\n\ngo 1.27\n");
-  jsfs.writeFile("/work/gui/main.go", `//go:build js && wasm
-package main
+  // The gallery's prebuilt demo programs, so a click launches instantly. Each
+  // is a small self-contained Go program; its SOURCE is seeded at /work/demo
+  // (below) so it is viewable and rebuildable in the desk.
+  for (const w of ["fs.wasm","timeconc.wasm","procparent.wasm","procchild.wasm","netclient.wasm","gui.wasm"]) {
+    jsfs.writeFile("/work/" + w, await fetchBytes(w), 0o755);
+  }
 
-import (
-	"os"
-	"syscall/js"
-	"time"
-)
-
-func main() {
-	el := js.Global().Get("document").Call("getElementById", os.Getenv("SHIPYARD_MOUNT"))
-	if !el.Truthy() {
-		return
-	}
-	el.Get("style").Set("cssText", "font:22px ui-monospace,monospace;color:#9d7cff;display:flex;align-items:center;justify-content:center;height:100%;background:#0e0c14;text-align:center")
-	tick := func() { el.Set("textContent", "built & running in a window—"+time.Now().Format("15:04:05")) }
-	tick()
-	var f js.Func
-	f = js.FuncOf(func(js.Value, []js.Value) any { tick(); js.Global().Call("setTimeout", f, 1000); return nil })
-	js.Global().Call("setTimeout", f, 1000)
-	select {}
-}
-`);
-
-  // The vnet server demo's SOURCE, so it can be rebuilt in the desk:
-  //   cd /work/server && go build -o server.wasm . && run server.wasm
-  // demo.json is {inTabPath: sourceText}; the module is self-contained (it
-  // carries a copy of bottle's vnet net.* drop-ins) so it builds offline.
+  // The demo programs' SOURCE (one self-contained module at /work/demo), so
+  // the desk can view and rebuild any of them, e.g.
+  //   cd /work/demo && go build -o /work/server.wasm ./server && run server.wasm
+  // demo.json is {inTabPath: sourceText}; the module carries its own copies of
+  // bottle's vnet and proc drop-ins, so it builds offline from seeded std alone.
   try {
     const demo = await (await fetch("demo.json")).json();
     for (const p in demo) { jsfs.mkdirp(p.replace(/\/[^/]*$/, "")); jsfs.writeFile(p, demo[p]); }
-    log("seeded the vnet server demo source (" + Object.keys(demo).length + " files)");
-  } catch (e) { log("vnet demo source not seeded: " + e); }
+    log("seeded the demo programs' source (" + Object.keys(demo).length + " files)");
+  } catch (e) { log("demo source not seeded: " + e); }
 
   await jsfs.persist.flush(); // persist the toolchain now, so the next reload restores it
   log("seeded the toolchain" + (cached.restored ? "" : " (first visit)"));
@@ -118,59 +100,14 @@ func main() {
   await ready;
   log("terminal open — type a command, or `cd /work && go build .`");
 
-  // Optional headless self-test: drive commands in and read the terminal back.
+  // The "What the Go Playground can't do" gallery: a dock of one-click demos,
+  // each captioned with the limitation it breaks (demos.js is the single source
+  // of truth, shared with the static Pages build).
+  window.shipyardGallery.render();
+
+  // Optional headless self-test: run every gallery demo and log its marker.
   if (location.hash === "#selftest") {
-    const term = () => document.querySelector("#desktop .wb-body").textContent || "";
-    const waitFor = async (re, ms) => { const t=Date.now(); while(Date.now()-t<ms){ if(re.test(term())) return true; await new Promise(r=>setTimeout(r,200)); } return false; };
-    const waitFile = async (p, ms) => { const t=Date.now(); while(Date.now()-t<ms){ const b=jsfs.readFile(p); if(b&&b.length>0) return b.length; await new Promise(r=>setTimeout(r,300)); } return 0; };
-    log("\n[selftest] go version"); window.__shipyardSubmit("go version");
-    log("[selftest] go version shown in terminal: " + (await waitFor(/go version go1\.27/, 60000)));
-    log("[selftest] cd /work && go build -o hello.wasm ."); window.__shipyardSubmit("cd /work && go build -o hello.wasm .");
-    const size = await waitFile("/work/hello.wasm", 240000); // poll the artifact, not the echoed line
-    if (size>0) log("SHIPYARD-M2-MARKER: the terminal built /work/hello.wasm ("+size+" bytes)");
-    else log("SHIPYARD-M2-FAIL: no binary after build");
-
-    // M3: build a GUI program and run it in its own window.
-    log("[selftest] cd /work/gui && go build -o clock.wasm ."); window.__shipyardSubmit("cd /work/gui && go build -o clock.wasm .");
-    const gsz = await waitFile("/work/gui/clock.wasm", 240000);
-    log("[selftest] clock.wasm built: "+gsz+" bytes; run clock.wasm"); window.__shipyardSubmit("run clock.wasm");
-    const windowUp = await (async ()=>{ const t=Date.now(); while(Date.now()-t<30000){ const el=document.getElementById("shipyard-app-1"); if(el && /\d\d:\d\d:\d\d/.test(el.textContent||"")) return true; await new Promise(r=>setTimeout(r,300)); } return false; })();
-    // diagnostics
-    const bodies = document.querySelectorAll("#desktop .wb-body");
-    log("[diag] .wb-body count: "+bodies.length+"; #shipyard-app-1 exists: "+!!document.getElementById("shipyard-app-1")+"; its text: "+JSON.stringify((document.getElementById("shipyard-app-1")||{}).textContent||""));
-    const term0 = bodies[0] ? bodies[0].textContent : "";
-    log("[diag] terminal tail: "+JSON.stringify(term0.slice(-160)));
-    if (gsz>0 && windowUp) log("SHIPYARD-M3-MARKER: `run` opened a window and the built GUI program is drawing in it");
-    else log("SHIPYARD-M3-FAIL: gui="+gsz+" windowUp="+windowUp);
-
-    // The Go/wasm browser: run it and confirm its chrome + iframe engine came up.
-    log("[selftest] run /work/browser.wasm"); window.__shipyardSubmit("run /work/browser.wasm");
-    const browserUp = await (async ()=>{ const t=Date.now(); while(Date.now()-t<20000){ const f=document.getElementById("browser-frame"); if(f && (f.getAttribute("src")||"").length>0) return f.getAttribute("src"); await new Promise(r=>setTimeout(r,300)); } return ""; })();
-    if (browserUp) log("SHIPYARD-BROWSER-MARKER: a Go/wasm browser is running; its iframe engine navigated to "+JSON.stringify(browserUp.slice(0,40)));
-    else log("SHIPYARD-BROWSER-FAIL");
-
-    // VNET: an in-tab net/http server, reached by netscrape OVER bottle's vnet
-    // — no server-side proxy, no /fetch, no network. This is the thing the Go
-    // Playground cannot do, and it works client-side on static Pages.
-    log("[selftest] run /work/server.wasm (net/http listening on vnet:8080)"); window.__shipyardSubmit("run /work/server.wasm");
-    const listening = await (async ()=>{ const t=Date.now(); while(Date.now()-t<20000){ try{ if(window.vnet && window.vnet.listening && window.vnet.listening(8080)) return true; }catch(e){} await new Promise(r=>setTimeout(r,200)); } return false; })();
-    log("[selftest] vnet 8080 listening: "+listening);
-    // Direct transport proof: netscrape's own seam (__netscrapeFetch) fetches the page over vnet.
-    let via=""; try { const r = await window.__netscrapeFetch("http://127.0.0.1:8080/"); via = await r.text(); } catch(e){ via = "ERR "+e; }
-    const viaOK = /SHIPYARD-VNET-PAGE/.test(via);
-    // Full browser path: drive the running netscrape browser to the vnet address and read what it rendered.
-    let uiOK=false;
-    try {
-      const bf=document.getElementById("browser-frame");
-      const body=bf && bf.closest ? bf.closest(".wb-body") : null;
-      const inp=body ? body.querySelector("input") : null;
-      if(inp){ inp.value="127.0.0.1:8080"; inp.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true})); }
-      uiOK = await (async ()=>{ const t=Date.now(); while(Date.now()-t<20000){ const s=bf?(bf.getAttribute("srcdoc")||""):""; if(/SHIPYARD-VNET-PAGE/.test(s)) return true; await new Promise(r=>setTimeout(r,300)); } return false; })();
-    } catch(e){ log("[diag] vnet nav err "+e); }
-    log("[diag] vnet transport bytes: "+JSON.stringify(via.slice(0,70)));
-    if (listening && (viaOK||uiOK)) log("SHIPYARD-VNET-MARKER: netscrape fetched an in-tab net/http server over vnet (no server, no /fetch) — transport="+viaOK+" rendered="+uiOK);
-    else log("SHIPYARD-VNET-FAIL: listening="+listening+" transport="+viaOK+" rendered="+uiOK);
-    log("== selftest done ==");
+    await window.shipyardGallery.selftest(log);
   }
 })().catch(e => { document.getElementById("boot").textContent += "\nERROR "+e+"\n"+((e&&e.stack)||""); });
 </script>

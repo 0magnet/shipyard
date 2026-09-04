@@ -12,14 +12,21 @@
 set -eu
 cd "$(dirname "$0")"
 
-echo "shipyard/pages: building shipyard.wasm + browser.wasm + server.wasm…"
+echo "shipyard/pages: building shipyard.wasm + browser.wasm + the gallery demos…"
 GOOS=js GOARCH=wasm go build -o shipyard.wasm ./cmd/shipyard
 GOOS=js GOARCH=wasm go build -o browser.wasm ./cmd/browser
 
-# The vnet demo server (self-contained module — see build.sh). On Pages this is
-# the headline: a Go net/http server the browser reaches over vnet, fully
-# client-side, no server component at all.
-( cd demo/server && GOOS=js GOARCH=wasm GOFLAGS=-mod=mod go build -o ../../server.wasm . )
+# The "What the Go Playground can't do" gallery demos: one self-contained module
+# (demo/) that builds offline from seeded std alone. On Pages this is the whole
+# point — every demo runs fully client-side, no server component at all.
+build_demo() { ( cd demo && GOOS=js GOARCH=wasm GOFLAGS=-mod=mod go build -o "../$2" "./$1" ); }
+build_demo server            server.wasm
+build_demo netclient         netclient.wasm
+build_demo fs                fs.wasm
+build_demo timeconc          timeconc.wasm
+build_demo procdemo/parent   procparent.wasm
+build_demo procdemo/child    procchild.wasm
+build_demo gui               gui.wasm
 
 # shipwright supplies the Go toolchain built for js/wasm and the bottle runtime
 # (jsfs.js / proc.js / wasm_exec.js) plus stdsrc.sh. Build it from source.
@@ -30,7 +37,7 @@ else
 fi
 ( cd .shipwright && ./build.sh )
 
-for f in go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm \
+for f in go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm vet-proc.wasm \
          jsfs.js proc.js wasm_exec.js; do
 	cp ".shipwright/$f" .
 done
@@ -44,14 +51,16 @@ else
 fi
 cp .bottle/vnet.js .bottle/vnet-sw.js .
 
-# demo.json: the vnet server's source, seeded into the tab so it can be rebuilt.
-jq -n \
-	--rawfile gomod demo/server/go.mod \
-	--rawfile main  demo/server/main.go \
-	--rawfile vjs   demo/server/vnet/vnet_js.go \
-	--rawfile vnat  demo/server/vnet/vnet_native.go \
-	'{"/work/server/go.mod":$gomod,"/work/server/main.go":$main,"/work/server/vnet/vnet_js.go":$vjs,"/work/server/vnet/vnet_native.go":$vnat}' \
-	> demo.json
+# demo.json: the whole demo module's source, seeded into the tab at /work/demo
+# so the desk can view and rebuild any gallery demo.
+gen_demojson() {
+	find demo -type f \( -name '*.go' -o -name 'go.mod' \) -print0 \
+	| while IFS= read -r -d '' f; do
+		jq -Rs --arg p "/work/demo/${f#demo/}" '{($p): .}' "$f"
+	done | jq -s 'add'
+}
+gen_demojson > demo.json
+echo "shipyard/pages: demo.json has $(jq 'length' demo.json) files"
 
 echo "shipyard/pages: harvesting the full standard library (stdsrc.sh all)…"
 ( cd .shipwright && ./stdsrc.sh all )
@@ -61,8 +70,10 @@ echo "shipyard/pages: stdsrc.json is $(du -h stdsrc.json | cut -f1)"
 echo "shipyard/pages: staging _site/…"
 rm -rf _site && mkdir _site
 cp pages.html _site/index.html
-for f in shipyard.wasm browser.wasm server.wasm go-proc.wasm compile-proc.wasm link-proc.wasm \
-         asm-proc.wasm jsfs.js proc.js wasm_exec.js vnet.js vnet-sw.js demo.json stdsrc.json; do
+for f in shipyard.wasm browser.wasm server.wasm netclient.wasm fs.wasm timeconc.wasm \
+         procparent.wasm procchild.wasm gui.wasm \
+         go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm vet-proc.wasm \
+         jsfs.js proc.js wasm_exec.js vnet.js vnet-sw.js demos.js demo.json stdsrc.json; do
 	cp "$f" _site/
 done
 echo "shipyard/pages: _site ready ($(du -sh _site | cut -f1)) — deploy its contents to Pages"

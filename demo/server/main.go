@@ -25,7 +25,7 @@ import (
 	"syscall/js"
 	"time"
 
-	"srv/vnet"
+	"demo/vnet"
 )
 
 // page is what the server serves. The SHIPYARD-VNET-PAGE token is the headless

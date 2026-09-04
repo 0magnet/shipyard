@@ -9,11 +9,20 @@ echo "shipyard: building shipyard.wasm + the demo programs…"
 GOOS=js GOARCH=wasm go build -o shipyard.wasm ./cmd/shipyard
 GOOS=js GOARCH=wasm go build -o browser.wasm ./cmd/browser
 
-# The vnet demo: a real Go net/http server that listens on bottle's vnet, so the
-# netscrape browser reaches it over the in-tab virtual network — no server. It
-# is a self-contained module (demo/server carries a copy of bottle's vnet net.*
-# drop-ins) so it builds offline in the desk too.
-( cd demo/server && GOOS=js GOARCH=wasm GOFLAGS=-mod=mod go build -o ../../server.wasm . )
+# The gallery demo programs: one self-contained module (demo/) whose only
+# non-std imports are its own copies of bottle's vnet and proc drop-ins, so each
+# builds offline in the desk from the seeded standard library alone. These are
+# the "What the Go Playground can't do" demos, prebuilt so a gallery click
+# launches instantly; their source is seeded too (demo.json) for viewing.
+echo "shipyard: building the gallery demo programs (demo/)…"
+build_demo() { ( cd demo && GOOS=js GOARCH=wasm GOFLAGS=-mod=mod go build -o "../$2" "./$1" ); }
+build_demo server            server.wasm      # net/http server on vnet
+build_demo netclient         netclient.wasm   # net/http client over vnet
+build_demo fs                fs.wasm          # filesystem read/write
+build_demo timeconc          timeconc.wasm    # real clock + concurrency
+build_demo procdemo/parent   procparent.wasm  # spawn a child, pipe stdio
+build_demo procdemo/child    procchild.wasm   # the child it spawns
+build_demo gui               gui.wasm         # animated canvas widget
 
 # shipwright supplies the Go toolchain built for js/wasm and the bottle runtime
 # (jsfs.js / proc.js / wasm_exec.js). Build it from source next door.
@@ -24,7 +33,7 @@ else
 fi
 ( cd .shipwright && ./build.sh )
 
-for f in go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm \
+for f in go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm vet-proc.wasm \
          jsfs.js proc.js wasm_exec.js; do
 	cp ".shipwright/$f" .
 done
@@ -39,17 +48,18 @@ else
 fi
 cp .bottle/vnet.js .bottle/vnet-sw.js .
 
-# demo.json seeds the vnet server's SOURCE into the tab's filesystem, so the
-# desk can rebuild it (cd /work/server && go build -o server.wasm .). Keyed by
-# the in-tab path; the whole module is self-contained (no external imports).
-echo "shipyard: generating demo.json (the vnet server demo source)…"
-jq -n \
-	--rawfile gomod demo/server/go.mod \
-	--rawfile main  demo/server/main.go \
-	--rawfile vjs   demo/server/vnet/vnet_js.go \
-	--rawfile vnat  demo/server/vnet/vnet_native.go \
-	'{"/work/server/go.mod":$gomod,"/work/server/main.go":$main,"/work/server/vnet/vnet_js.go":$vjs,"/work/server/vnet/vnet_native.go":$vnat}' \
-	> demo.json
+# demo.json seeds the demo module's SOURCE into the tab's filesystem at
+# /work/demo, so the desk can view and rebuild any demo (cd /work/demo && go
+# build ./...). Keyed by in-tab path; the whole module is self-contained.
+echo "shipyard: generating demo.json (the gallery demo source)…"
+gen_demojson() {
+	find demo -type f \( -name '*.go' -o -name 'go.mod' \) -print0 \
+	| while IFS= read -r -d '' f; do
+		jq -Rs --arg p "/work/demo/${f#demo/}" '{($p): .}' "$f"
+	done | jq -s 'add'
+}
+gen_demojson > demo.json
+echo "shipyard: demo.json has $(jq 'length' demo.json) files"
 
 # The standard library is served lazily (serve's /std/ endpoint, rooted at
 # GOROOT) rather than shipped as one big blob: stdskel.json is just each std
