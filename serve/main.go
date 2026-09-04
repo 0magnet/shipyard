@@ -3,10 +3,10 @@
 // browser Fetch API: a tab can call its own origin but not proxy.golang.org
 // or sum.golang.org (CORS). serve stands in for both, same-origin:
 //
-//   /goproxy/                       → the Go module proxy (proxy.golang.org)
-//   /goproxy/sumdb/sum.golang.org/  → the checksum database (sum.golang.org),
-//                                     mirrored per the proxy protocol so the
-//                                     tab can run with GOSUMDB on
+//	/goproxy/                       → the Go module proxy (proxy.golang.org)
+//	/goproxy/sumdb/sum.golang.org/  → the checksum database (sum.golang.org),
+//	                                  mirrored per the proxy protocol so the
+//	                                  tab can run with GOSUMDB on
 //
 // It fetches upstream server-side and *follows redirects itself*, so the
 // browser only ever sees a same-origin 200 — proxy.golang.org serves large
@@ -24,6 +24,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os/exec"
 	"strings"
 )
 
@@ -57,7 +58,18 @@ func main() {
 	dir := flag.String("dir", ".", "directory to serve")
 	upstream := flag.String("upstream", "https://proxy.golang.org", "Go module proxy to pass through to")
 	sumdb := flag.String("sumdb", "https://sum.golang.org", "checksum database to mirror")
+	stdroot := flag.String("stdroot", "", "GOROOT to serve std source from at /std/ (default: `go env GOROOT`)")
 	flag.Parse()
+
+	// /std/<goroot-relative> serves standard-library source, so the page can
+	// seed a lazy skeleton and fetch each file's bytes only when a build first
+	// imports it. Rooted at GOROOT (from -stdroot, else `go env GOROOT`).
+	goroot := *stdroot
+	if goroot == "" {
+		if out, err := exec.Command("go", "env", "GOROOT").Output(); err == nil {
+			goroot = strings.TrimSpace(string(out))
+		}
+	}
 
 	modFwd := forward(*upstream)
 	sumFwd := forward(*sumdb)
@@ -102,6 +114,10 @@ func main() {
 		w.WriteHeader(resp.StatusCode)
 		io.Copy(w, resp.Body)
 	})
+
+	if goroot != "" {
+		mux.Handle("/std/", http.StripPrefix("/std/", http.FileServer(http.Dir(goroot))))
+	}
 
 	mux.Handle("/", http.FileServer(http.Dir(*dir)))
 

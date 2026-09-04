@@ -16,29 +16,22 @@ window.addEventListener("error", function(e){ if(e.message && /already exited/.t
   const log = (l) => { boot.textContent += l + "\n"; try{console.log(l);}catch(_){} };
   const fetchBytes = async (u) => new Uint8Array(await (await fetch(u)).arrayBuffer());
 
-  // Restore the workstation from IndexedDB if we've been here before: a reload
-  // then skips re-seeding the toolchain and standard library entirely (the
-  // ~100 MB that makes a cold load slow). The module cache the toolchain writes
-  // — fetched dependencies included — persists the same way, its mutations
-  // auto-snapshotted.
+  // Restore the workstation from IndexedDB if we've been here before. The
+  // toolchain is seeded once and persists across reloads; the standard library
+  // is a lazy skeleton (below) — cheap to seed, its bytes fetched per-file on
+  // first import — so a cold load pulls only the tools plus what a build
+  // actually touches, and a reload pulls nothing.
   const cached = await jsfs.persist.enable("shipyard-fs");
-  const seeded = () => jsfs.readFile("/bin/go") && jsfs.readFile("/goroot/src/fmt/print.go");
-  if (cached.restored && seeded()) {
-    log("restored the workstation from cache — reload is instant");
-  } else {
-  // Seed the shipwright toolchain into jsfs, where the shell will exec it.
-  jsfs.mkdirp("/bin"); jsfs.mkdirp("/goroot/pkg/tool/js_wasm");
+  const have = (p) => { try { const b = jsfs.readFile(p); return !!(b && b.length); } catch (e) { return false; } };
   jsfs.mkdirp("/gopath"); jsfs.mkdirp("/work"); jsfs.mkdirp("/root/.cache/go-build"); jsfs.mkdirp("/tmp");
+  if (!have("/bin/go")) {
+  jsfs.mkdirp("/bin"); jsfs.mkdirp("/goroot/pkg/tool/js_wasm");
   jsfs.writeFile("/bin/go", await fetchBytes("go-proc.wasm"), 0o755);
   jsfs.writeFile("/goroot/pkg/tool/js_wasm/compile", await fetchBytes("compile-proc.wasm"), 0o755);
   jsfs.writeFile("/goroot/pkg/tool/js_wasm/link",    await fetchBytes("link-proc.wasm"),    0o755);
   jsfs.writeFile("/goroot/pkg/tool/js_wasm/asm",     await fetchBytes("asm-proc.wasm"),     0o755);
   jsfs.writeFile("/goroot/VERSION", "go1.27.0\n");
-  log("seeding std source…");
-  const std = await (await fetch("stdsrc.json")).json();
-  let n=0; for(const p in std){ jsfs.writeFile(p, Uint8Array.from(atob(std[p]),c=>c.charCodeAt(0))); n++; }
   jsfs.writeFile("/work/browser.wasm", await fetchBytes("browser.wasm"), 0o755); // a Go/wasm browser, prebuilt
-  log("seeded "+n+" std files, /bin/go, the tools, and browser.wasm");
   jsfs.writeFile("/work/go.mod", "module hello\n\ngo 1.27\n");
   jsfs.writeFile("/work/main.go", "package main\n\nimport \"fmt\"\n\nfunc main(){ fmt.Println(\"hello, built in a shell in a tab\") }\n");
 
@@ -69,9 +62,19 @@ func main() {
 	select {}
 }
 `);
-  await jsfs.persist.flush(); // snapshot the seeded tree now, so the next reload restores it
-  log("seeded and cached — the next reload will be instant");
+  await jsfs.persist.flush(); // persist the toolchain now, so the next reload restores it
+  log("seeded the toolchain" + (cached.restored ? "" : " (first visit)"));
+  } else {
+  log("restored the toolchain from cache");
   }
+
+  // The standard library: a lazy skeleton. Files fetched by an earlier build
+  // (restored above) stay resident; the rest are (re)seeded lazy — their bytes
+  // arrive from /std the first time a build imports them.
+  const skel = await (await fetch("stdskel.json")).json();
+
+  let lazy = 0; for (const p in skel) { if (!have(p)) { jsfs.writeLazy(p, skel[p], "/std" + p.slice(7)); lazy++; } }
+  log("std library: " + lazy + " files lazy, " + (Object.keys(skel).length - lazy) + " resident");
 
   window.__shipyardGOPROXY = location.origin + "/goproxy";
 
