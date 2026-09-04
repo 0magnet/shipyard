@@ -16,6 +16,16 @@ window.addEventListener("error", function(e){ if(e.message && /already exited/.t
   const log = (l) => { boot.textContent += l + "\n"; try{console.log(l);}catch(_){} };
   const fetchBytes = async (u) => new Uint8Array(await (await fetch(u)).arrayBuffer());
 
+  // Restore the workstation from IndexedDB if we've been here before: a reload
+  // then skips re-seeding the toolchain and standard library entirely (the
+  // ~100 MB that makes a cold load slow). The module cache the toolchain writes
+  // — fetched dependencies included — persists the same way, its mutations
+  // auto-snapshotted.
+  const cached = await jsfs.persist.enable("shipyard-fs");
+  const seeded = () => jsfs.readFile("/bin/go") && jsfs.readFile("/goroot/src/fmt/print.go");
+  if (cached.restored && seeded()) {
+    log("restored the workstation from cache — reload is instant");
+  } else {
   // Seed the shipwright toolchain into jsfs, where the shell will exec it.
   jsfs.mkdirp("/bin"); jsfs.mkdirp("/goroot/pkg/tool/js_wasm");
   jsfs.mkdirp("/gopath"); jsfs.mkdirp("/work"); jsfs.mkdirp("/root/.cache/go-build"); jsfs.mkdirp("/tmp");
@@ -59,6 +69,9 @@ func main() {
 	select {}
 }
 `);
+  await jsfs.persist.flush(); // snapshot the seeded tree now, so the next reload restores it
+  log("seeded and cached — the next reload will be instant");
+  }
 
   window.__shipyardGOPROXY = location.origin + "/goproxy";
 

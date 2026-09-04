@@ -68,16 +68,19 @@ instantiating another wasm module.
   form submits drive the browser). `run /work/browser.wasm` opens it in a
   window. Each of fetch, sandbox, navigation, and resource-inlining is
   headless-verified.
-- **Next — wire it into the visor.** The transport is already pluggable: a host
-  sets `globalThis.__shipyardBrowserFetch(url)` to route through its own network
-  (skywire's `fetchDmsg`). The remaining work is in skywire — embed the browser
-  wasm in `pkg/wasmhv/browseui` beside `WinBoxWasm`, have the visor page
-  instantiate it (with the dmsg transport) in place of `browse.js`, and verify
-  against a running visor. That's a skywire PR of its own, needing visor
-  runtime testing; richer transcoding (fonts, nested `@import`, XHR) layers on
-  the same relay.
-- **Lazy std + persistence.** Seed the standard library on demand and cache it
-  (with the module cache) in IndexedDB via jsfs, so a reload is instant.
+  The transport is pluggable (`globalThis.__shipyardBrowserFetch`), so a host
+  can route it through its own network; that's an exploration, not a commitment
+  to live anywhere in particular — if the shipyard/wasm-visor combination is
+  worth shipping, it belongs in its own repo, not folded into either side.
+- **✓ Instant reloads.** `index.html` restores the whole workstation —
+  toolchain, standard library, and your `/work` — from IndexedDB via
+  `jsfs.persist`, so a reload skips the ~100 MB cold seed entirely. The module
+  cache persists the same way, so a dependency fetched once stays fetched.
+  Verified: a reload restores from cache with no re-seed.
+- **Richer transcoding.** Fonts, nested `@import`, and XHR layer onto the same
+  resource relay the browser already uses for stylesheets and images.
+- **Lazy std.** Seeding is all-of-std up front today; fetching each std package
+  only when a build first imports it would shrink the cold seed further.
 
 ## Build
 
