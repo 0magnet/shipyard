@@ -54,8 +54,8 @@ cp .bottle/vnet.js .bottle/vnet-sw.js .
 # demo.json: the whole demo module's source, seeded into the tab at /work/demo
 # so the desk can view and rebuild any gallery demo.
 gen_demojson() {
-	find demo -type f \( -name '*.go' -o -name 'go.mod' \) -print0 \
-	| while IFS= read -r -d '' f; do
+	find demo -type f \( -name '*.go' -o -name 'go.mod' \) \
+	| while IFS= read -r f; do
 		jq -Rs --arg p "/work/demo/${f#demo/}" '{($p): .}' "$f"
 	done | jq -s 'add'
 }

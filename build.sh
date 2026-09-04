@@ -53,8 +53,8 @@ cp .bottle/vnet.js .bottle/vnet-sw.js .
 # build ./...). Keyed by in-tab path; the whole module is self-contained.
 echo "shipyard: generating demo.json (the gallery demo source)…"
 gen_demojson() {
-	find demo -type f \( -name '*.go' -o -name 'go.mod' \) -print0 \
-	| while IFS= read -r -d '' f; do
+	find demo -type f \( -name '*.go' -o -name 'go.mod' \) \
+	| while IFS= read -r f; do
 		jq -Rs --arg p "/work/demo/${f#demo/}" '{($p): .}' "$f"
 	done | jq -s 'add'
 }
