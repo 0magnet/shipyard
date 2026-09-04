@@ -6,6 +6,10 @@ gives it the Go toolchain. shipyard is where you sit down and use them: a shell
 where you type `go build`, on the same in-memory filesystem the compiler reads,
 with the browser to view what you make.
 
+**[Live demo](https://0magnet.github.io/shipyard/)** — `go` is already on the PATH; type `cd /work && go build .` and run what comes out, or click a demo to watch it break a Go Playground limitation.
+
+![shipyard in the browser](docs/shipyard-demo.png "a shell window with the Go toolchain on its PATH, beside the panel of things the Go Playground cannot do")
+
 The pieces, and who does what:
 
 - **bottle** — jsfs (files), vnet (loopback network), proc (processes).
@@ -130,3 +134,38 @@ instantiating another wasm module.
     go run ./serve      # http://localhost:8931, static + the /goproxy passthrough
 
 Then open `http://localhost:8931/demo.html`.
+
+## Dependency Graph
+
+Made with [goda](https://github.com/loov/goda):
+
+```
+# GOOS=js: the import edges of a wasm program live in js/wasm-tagged
+# files and are invisible to a host-context run
+GOOS=js GOARCH=wasm go run github.com/loov/goda@latest graph github.com/0magnet/shipyard/... | dot -Tsvg -o docs/shipyard-goda-graph.svg
+```
+
+![Dependency Graph](docs/shipyard-goda-graph.svg "github.com/0magnet/shipyard Dependency Graph")
+
+## Lines of Code
+
+Made with [gocloc](https://github.com/hhatto/gocloc) (excludes `vendor/`, `node_modules/`, `.git/`):
+
+```
+gocloc --not-match-d='(vendor|node_modules|\.git)' .
+```
+
+```
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+Go                              16            130            254            908
+JavaScript                       1             12             40            254
+HTML                             3             27             53            207
+Markdown                         1             22              0            114
+Bourne Shell                     2             16             39            103
+YAML                             1              0              7             98
+-------------------------------------------------------------------------------
+TOTAL                           24            207            393           1684
+-------------------------------------------------------------------------------
+```
