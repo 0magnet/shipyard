@@ -5,9 +5,11 @@ name: Pages
 # browser.wasm + shipwright's js/wasm toolchain + the whole standard library
 # (stdsrc.json, seeded eagerly by pages.html), and stages it in _site/. The
 # offline demo — boot the terminal, `go build` from the seeded std, `run` it in
-# a window — runs fully in the visitor's browser. The networked features
-# (external deps over /goproxy, browsing the live web over /fetch) need a server
-# that static Pages hosting can't provide, so they are not wired up here.
+# a window — runs fully in the visitor's browser. It also ships server.wasm and
+# vnet.js: `run server.wasm` starts a Go net/http server on bottle's in-tab vnet
+# and the netscrape browser reaches it at 127.0.0.1:8080, entirely client-side —
+# that works here. Only the features that need a real server (external deps over
+# /goproxy, browsing the LIVE web over /fetch) are not wired up on static Pages.
 
 on:
   push:
