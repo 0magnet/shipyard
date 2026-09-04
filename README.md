@@ -68,10 +68,21 @@ instantiating another wasm module.
   form submits drive the browser). `run /work/browser.wasm` opens it in a
   window. Each of fetch, sandbox, navigation, and resource-inlining is
   headless-verified.
-  The transport is pluggable (`globalThis.__shipyardBrowserFetch`), so a host
-  can route it through its own network; that's an exploration, not a commitment
-  to live anywhere in particular — if the shipyard/wasm-visor combination is
-  worth shipping, it belongs in its own repo, not folded into either side.
+  The transport is pluggable (`globalThis.__netscrapeFetch`), so a host can
+  route it through its own network; that's an exploration, not a commitment to
+  live anywhere in particular — if the shipyard/wasm-visor combination is worth
+  shipping, it belongs in its own repo, not folded into either side.
+- **✓ In-tab networking — the browser reaches a server over vnet.** The desk
+  ships `server.wasm`, a real Go `net/http` server that listens on bottle's
+  **vnet** virtual loopback (`vnet.Listen`, a `net.*` drop-in). `run
+  server.wasm`, then in the browser open `127.0.0.1:8080`: shipyard's
+  `__netscrapeFetch` dials that vnet port with `vnet.httpFetch` and hands the
+  bytes back, so the browser renders a page served by another wasm process **in
+  the same tab** — no server, no `/fetch` proxy, no network. This is the thing
+  the Go Playground cannot do, and it works unchanged on static GitHub Pages.
+  The server's source is seeded at `/work/server` (a self-contained module) so
+  you can `go build` it in the desk too. Headless-verified end to end
+  (`SHIPYARD-VNET-MARKER`), on both the local desk and the static Pages build.
 - **✓ Instant reloads.** `index.html` restores the whole workstation —
   toolchain, standard library, and your `/work` — from IndexedDB via
   `jsfs.persist`, so a reload skips the ~100 MB cold seed entirely. The module

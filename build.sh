@@ -9,6 +9,12 @@ echo "shipyard: building shipyard.wasm + the demo programs…"
 GOOS=js GOARCH=wasm go build -o shipyard.wasm ./cmd/shipyard
 GOOS=js GOARCH=wasm go build -o browser.wasm ./cmd/browser
 
+# The vnet demo: a real Go net/http server that listens on bottle's vnet, so the
+# netscrape browser reaches it over the in-tab virtual network — no server. It
+# is a self-contained module (demo/server carries a copy of bottle's vnet net.*
+# drop-ins) so it builds offline in the desk too.
+( cd demo/server && GOOS=js GOARCH=wasm GOFLAGS=-mod=mod go build -o ../../server.wasm . )
+
 # shipwright supplies the Go toolchain built for js/wasm and the bottle runtime
 # (jsfs.js / proc.js / wasm_exec.js). Build it from source next door.
 if [ ! -d .shipwright ]; then
@@ -22,6 +28,28 @@ for f in go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm \
          jsfs.js proc.js wasm_exec.js; do
 	cp ".shipwright/$f" .
 done
+
+# vnet.js (the page's virtual loopback) and its optional service-worker bridge
+# come from bottle. jsfs.js/proc.js above are bottle's too (shipwright vendors
+# them); vnet.js is not, so pull it straight from bottle.
+if [ ! -d .bottle ]; then
+	git clone --depth 1 https://github.com/0magnet/bottle .bottle
+else
+	( cd .bottle && git pull -q --ff-only )
+fi
+cp .bottle/vnet.js .bottle/vnet-sw.js .
+
+# demo.json seeds the vnet server's SOURCE into the tab's filesystem, so the
+# desk can rebuild it (cd /work/server && go build -o server.wasm .). Keyed by
+# the in-tab path; the whole module is self-contained (no external imports).
+echo "shipyard: generating demo.json (the vnet server demo source)…"
+jq -n \
+	--rawfile gomod demo/server/go.mod \
+	--rawfile main  demo/server/main.go \
+	--rawfile vjs   demo/server/vnet/vnet_js.go \
+	--rawfile vnat  demo/server/vnet/vnet_native.go \
+	'{"/work/server/go.mod":$gomod,"/work/server/main.go":$main,"/work/server/vnet/vnet_js.go":$vjs,"/work/server/vnet/vnet_native.go":$vnat}' \
+	> demo.json
 
 # The standard library is served lazily (serve's /std/ endpoint, rooted at
 # GOROOT) rather than shipped as one big blob: stdskel.json is just each std

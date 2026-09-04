@@ -8,12 +8,34 @@
 </style>
 <div id="desktop"></div>
 <pre id="boot"></pre>
-<div id="note">Offline workstation: <b>go build</b> and <b>run</b> work fully in this tab, from the seeded standard library. Networked features (external deps via <code>go install</code>, browsing the live web) need running it locally with <code>go run ./serve</code> — see the <a href="https://github.com/0magnet/shipyard">repo</a>.</div>
+<div id="note">Offline workstation: <b>go build</b> and <b>run</b> work fully in this tab, from the seeded standard library. Try it: <code>run server.wasm</code>, then <code>run browser.wasm</code> and browse to <code>127.0.0.1:8080</code> — a Go <code>net/http</code> server and the browser reach each other over an in-tab virtual network, no server. Browsing the <em>live</em> web (and external deps via <code>go install</code>) needs running it locally with <code>go run ./serve</code> — see the <a href="https://github.com/0magnet/shipyard">repo</a>.</div>
 <script src="jsfs.js"></script>
 <script src="wasm_exec.js"></script>
 <script src="proc.js"></script>
+<script src="vnet.js"></script>
 <script>
 window.addEventListener("error", function(e){ if(e.message && /already exited/.test(e.message)){ e.preventDefault(); } });
+// Transport seam for the netscrape browser (globalThis.__netscrapeFetch). A
+// loopback/vnet address is dialed over bottle's vnet and answered by an HTTP
+// server running in THIS tab — entirely client-side, so browsing an in-tab
+// server works on static GitHub Pages with no server component at all. Other
+// addresses fall back to serve's /fetch clearnet proxy (absent on Pages).
+window.__netscrapeFetch = function(url){
+  try {
+    var u = new URL(url.indexOf("://") < 0 ? "http://" + url : url);
+    var h = u.hostname;
+    if ((h === "127.0.0.1" || h === "localhost" || h === "::1" || h === "[::1]") && window.vnet) {
+      var p = parseInt(u.port || "0", 10);
+      if (p > 0) {
+        var path = (u.pathname || "/") + (u.search || "");
+        return window.vnet.httpFetch(p, "GET", path, null, {}).then(function(r){
+          return new Response(r.body, { status: r.status || 200, headers: r.headers || {} });
+        });
+      }
+    }
+  } catch (e) {}
+  return fetch("/fetch?url=" + encodeURIComponent(url));
+};
 (async function(){
   const boot = document.getElementById("boot");
   const log = (l) => { boot.textContent += l + "\n"; try{console.log(l);}catch(_){} };
@@ -37,6 +59,7 @@ window.addEventListener("error", function(e){ if(e.message && /already exited/.t
     jsfs.writeFile("/goroot/pkg/tool/js_wasm/asm",     await fetchBytes("asm-proc.wasm"),     0o755);
     jsfs.writeFile("/goroot/VERSION", "go1.27.0\n");
     jsfs.writeFile("/work/browser.wasm", await fetchBytes("browser.wasm"), 0o755); // a Go/wasm browser, prebuilt
+    jsfs.writeFile("/work/server.wasm", await fetchBytes("server.wasm"), 0o755);   // a Go net/http server on vnet, prebuilt
     jsfs.writeFile("/work/go.mod", "module hello\n\ngo 1.27\n");
     jsfs.writeFile("/work/main.go", "package main\n\nimport \"fmt\"\n\nfunc main(){ fmt.Println(\"hello, built in a shell in a tab\") }\n");
 
@@ -67,6 +90,17 @@ func main() {
 	select {}
 }
 `);
+
+    // The vnet server demo's SOURCE, so it can be rebuilt in the desk:
+    //   cd /work/server && go build -o server.wasm . && run server.wasm
+    // demo.json is {inTabPath: sourceText}; the module is self-contained (it
+    // carries a copy of bottle's vnet net.* drop-ins) so it builds offline.
+    try {
+      const demo = await (await fetch("demo.json")).json();
+      for (const p in demo) { jsfs.mkdirp(p.replace(/\/[^/]*$/, "")); jsfs.writeFile(p, demo[p]); }
+      log("seeded the vnet server demo source (" + Object.keys(demo).length + " files)");
+    } catch (e) { log("vnet demo source not seeded: " + e); }
+
     log("seeded the toolchain" + (cached.restored ? "" : " (first visit)"));
     seeded = true;
   } else {
@@ -127,6 +161,29 @@ func main() {
     const browserUp = await (async ()=>{ const t=Date.now(); while(Date.now()-t<20000){ const f=document.getElementById("browser-frame"); if(f && (f.getAttribute("src")||"").length>0) return f.getAttribute("src"); await new Promise(r=>setTimeout(r,300)); } return ""; })();
     if (browserUp) log("SHIPYARD-BROWSER-MARKER: a Go/wasm browser is running; its iframe engine navigated to "+JSON.stringify(browserUp.slice(0,40)));
     else log("SHIPYARD-BROWSER-INFO: browser chrome ran; clearnet navigation needs local serve (/fetch)");
+
+    // VNET: an in-tab net/http server, reached by netscrape OVER bottle's vnet.
+    // No server-side proxy, no /fetch, no network — so unlike clearnet browsing
+    // above, this works FULLY on static Pages. This is the thing the Go
+    // Playground cannot do.
+    log("[selftest] run /work/server.wasm (net/http listening on vnet:8080)"); window.__shipyardSubmit("run /work/server.wasm");
+    const listening = await (async ()=>{ const t=Date.now(); while(Date.now()-t<20000){ try{ if(window.vnet && window.vnet.listening && window.vnet.listening(8080)) return true; }catch(e){} await new Promise(r=>setTimeout(r,200)); } return false; })();
+    log("[selftest] vnet 8080 listening: "+listening);
+    // Direct transport proof: netscrape's own seam (__netscrapeFetch) fetches the page over vnet.
+    let via=""; try { const r = await window.__netscrapeFetch("http://127.0.0.1:8080/"); via = await r.text(); } catch(e){ via = "ERR "+e; }
+    const viaOK = /SHIPYARD-VNET-PAGE/.test(via);
+    // Full browser path: drive the running netscrape browser to the vnet address and read what it rendered.
+    let uiOK=false;
+    try {
+      const bf=document.getElementById("browser-frame");
+      const body=bf && bf.closest ? bf.closest(".wb-body") : null;
+      const inp=body ? body.querySelector("input") : null;
+      if(inp){ inp.value="127.0.0.1:8080"; inp.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true})); }
+      uiOK = await (async ()=>{ const t=Date.now(); while(Date.now()-t<20000){ const s=bf?(bf.getAttribute("srcdoc")||""):""; if(/SHIPYARD-VNET-PAGE/.test(s)) return true; await new Promise(r=>setTimeout(r,300)); } return false; })();
+    } catch(e){ log("[diag] vnet nav err "+e); }
+    log("[diag] vnet transport bytes: "+JSON.stringify(via.slice(0,70)));
+    if (listening && (viaOK||uiOK)) log("SHIPYARD-VNET-MARKER: netscrape fetched an in-tab net/http server over vnet (no server, no /fetch) — transport="+viaOK+" rendered="+uiOK);
+    else log("SHIPYARD-VNET-FAIL: listening="+listening+" transport="+viaOK+" rendered="+uiOK);
     log("== selftest done ==");
   }
 })().catch(e => { document.getElementById("boot").textContent += "\nERROR "+e+"\n"+((e&&e.stack)||""); });
