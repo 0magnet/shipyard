@@ -66,6 +66,7 @@ window.__netscrapeFetch = function(url){
   // actually touches, and a reload pulls nothing.
   const cached = await jsfs.persist.enable("shipyard-fs");
   const have = (p) => { try { const b = jsfs.readFile(p); return !!(b && b.length); } catch (e) { return false; } };
+  const firstVisit = !have("/bin/go");
   jsfs.mkdirp("/gopath"); jsfs.mkdirp("/work"); jsfs.mkdirp("/root/.cache/go-build"); jsfs.mkdirp("/tmp");
   if (!have("/bin/go")) {
   jsfs.mkdirp("/bin"); jsfs.mkdirp("/goroot/pkg/tool/js_wasm");
@@ -103,6 +104,29 @@ window.__netscrapeFetch = function(url){
   } else {
   log("restored the toolchain from cache");
   }
+
+  // The toolchain lives in IndexedDB, so a returning visitor keeps whatever was
+  // seeded on their first visit — a newly deployed build would never reach them.
+  // A stamp written at build time settles it: when it differs from the one
+  // stored beside the tools, the tools are replaced. Only the tools: /work is
+  // the user's, and a toolchain update is no reason to overwrite their files.
+  try {
+    const want = (await (await fetch("toolchain.stamp", { cache: "no-cache" })).text()).trim();
+    const got = have("/goroot/.stamp")
+      ? new TextDecoder().decode(jsfs.readFile("/goroot/.stamp")).trim() : "";
+    if (want && want !== got) {
+      if (!firstVisit) {
+        log("the toolchain changed since your last visit — replacing it");
+        jsfs.mkdirp("/bin"); jsfs.mkdirp("/goroot/pkg/tool/js_wasm");
+        jsfs.writeFile("/bin/go", await fetchBytes("go-proc.wasm"), 0o755);
+        for (const t of ["compile", "link", "asm", "vet"]) {
+          jsfs.writeFile("/goroot/pkg/tool/js_wasm/" + t, await fetchBytes(t + "-proc.wasm"), 0o755);
+        }
+      }
+      jsfs.writeFile("/goroot/.stamp", want);
+      await jsfs.persist.flush();
+    }
+  } catch (e) { log("toolchain stamp check skipped: " + e); }
 
   // The standard library: a lazy skeleton. Files fetched by an earlier build
   // (restored above) stay resident; the rest are (re)seeded lazy — their bytes

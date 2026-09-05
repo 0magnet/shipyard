@@ -38,6 +38,14 @@ for f in go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm vet-proc.wa
 	cp ".shipwright/$f" .
 done
 
+# A content stamp for the seeded toolchain. The desk compares it against the one
+# stored in IndexedDB and replaces the tools when a new build is deployed —
+# without it, a returning visitor keeps the toolchain from their first visit
+# forever, and a fix like off-thread compiles never reaches them.
+cat go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm vet-proc.wasm \
+  | sha256sum | cut -c1-16 > toolchain.stamp
+echo "shipyard: toolchain.stamp = $(cat toolchain.stamp)"
+
 # vnet.js (the page's virtual loopback) and its optional service-worker bridge
 # come from bottle. jsfs.js/proc.js above are bottle's too (shipwright vendors
 # them); vnet.js is not, so pull it straight from bottle.

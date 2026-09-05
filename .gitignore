@@ -12,3 +12,5 @@ vnet-sw.js
 .bottle/
 _site/
 *.log
+fsbridge.js
+toolchain.stamp

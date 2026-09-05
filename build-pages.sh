@@ -42,6 +42,14 @@ for f in go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm vet-proc.wa
 	cp ".shipwright/$f" .
 done
 
+# A content stamp for the seeded toolchain. The desk compares it against the one
+# stored in IndexedDB and replaces the tools when a new build is deployed —
+# without it, a returning visitor keeps the toolchain from their first visit
+# forever, and a fix like off-thread compiles never reaches them.
+cat go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm vet-proc.wasm \
+  | sha256sum | cut -c1-16 > toolchain.stamp
+echo "shipyard: toolchain.stamp = $(cat toolchain.stamp)"
+
 # vnet.js (the page's virtual loopback) comes from bottle — the seam the desk's
 # in-tab server and browser reach each other through.
 if [ ! -d .bottle ]; then
@@ -73,7 +81,7 @@ cp pages.html _site/index.html
 for f in shipyard.wasm browser.wasm server.wasm netclient.wasm fs.wasm timeconc.wasm \
          procparent.wasm procchild.wasm gui.wasm \
          go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm vet-proc.wasm \
-         jsfs.js fsbridge.js proc.js wasm_exec.js vnet.js vnet-sw.js coi-sw.js demos.js demo.json stdsrc.json; do
+         jsfs.js fsbridge.js proc.js wasm_exec.js vnet.js vnet-sw.js coi-sw.js toolchain.stamp demos.js demo.json stdsrc.json; do
 	cp "$f" _site/
 done
 echo "shipyard/pages: _site ready ($(du -sh _site | cut -f1)) — deploy its contents to Pages"
