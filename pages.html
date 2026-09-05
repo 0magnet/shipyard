@@ -68,7 +68,17 @@ window.__netscrapeFetch = function(url){
   // standard library up front, eagerly, from stdsrc.json ({path: base64}). The
   // workstation then builds and runs entirely offline. The seeded tree persists
   // to IndexedDB, so a reload skips the cold ~200 MB seed.
-  const cached = await jsfs.persist.enable("shipyard-pages-fs");
+  const cached = await jsfs.persist.enable("shipyard-pages-fs", {
+    // Keep the build cache and /tmp out of snapshots. serialize() deep-copies
+    // every file it keeps, synchronously on the main thread, and markDirty
+    // fires on every write — so with the cache included, each compile result
+    // cmd/go writes schedules another full-tree copy and a build spends its
+    // time freezing the page instead of building. jsfs documents this hook for
+    // exactly this: runtime caches are rebuilt, not carried. The cost is a cold
+    // build cache after a reload; the boot path recreates both directories.
+    exclude: (p) => p === "/tmp" || p.startsWith("/tmp/") ||
+      p === "/root/.cache" || p.startsWith("/root/.cache/"),
+  });
   const have = (p) => { try { const b = jsfs.readFile(p); return !!(b && b.length); } catch (e) { return false; } };
   const firstVisit = !have("/bin/go");
   jsfs.mkdirp("/gopath"); jsfs.mkdirp("/work"); jsfs.mkdirp("/root/.cache/go-build"); jsfs.mkdirp("/tmp");
