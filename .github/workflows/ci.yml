@@ -1,0 +1,47 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# What this runs is what `make check` runs locally, so a green tick here and a
+# clean tree there mean the same thing. The Makefile is the single definition;
+# this file only supplies a machine to run it on.
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      # make test, not go test ./...: it recurses into nested modules and falls
+      # back to the js/wasm tests under Node where nothing builds for the host,
+      # which is the whole of some of these repos.
+      - run: make test
+      # A compile gate for the js/wasm-tagged half. A wasm-only compile error is
+      # invisible to a host build, and in these repos that is most of the code.
+      - run: make test-wasm
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: install golangci-lint
+        # The installer is taken at the same tag as the binary it installs.
+        # Fetching it from master broke every run here: that script matches the
+        # checksums file by prefix, so for a release that also publishes an
+        # SBOM it reads the hash of golangci-lint-*.tar.gz.sbom.json and then
+        # rejects a download that was in fact correct. Pinning also means CI
+        # stops running whatever happens to be on a branch today.
+        env:
+          GOLANGCI_VERSION: v2.12.2
+        run: |
+          curl -sSfL "https://raw.githubusercontent.com/golangci/golangci-lint/${GOLANGCI_VERSION}/install.sh" |
+            sh -s -- -b "$(go env GOPATH)/bin" "${GOLANGCI_VERSION}"
+      # Two passes inside make lint: the host config, then again with GOOS=js,
+      # because a host run cannot see //go:build js && wasm files at all.
+      - run: make lint
