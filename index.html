@@ -6,7 +6,28 @@
 </style>
 <div id="desktop"></div>
 <pre id="boot"></pre>
+<script>
+// Cross-origin isolation, without a server that can set headers. SharedArrayBuffer
+// — and so fsbridge, and so compiles that do not freeze the tab — is only granted
+// to a cross-origin-isolated page, and GitHub Pages cannot send COOP/COEP. coi-sw.js
+// adds them to its own responses; this reloads once, after the worker takes control,
+// because the FIRST navigation came from Pages without them. Guarded so a browser
+// where it cannot work reloads once and then stops.
+(function () {
+  if (window.crossOriginIsolated || !('serviceWorker' in navigator)) return;
+  var KEY = 'coi-sw-reloaded';
+  navigator.serviceWorker.register('coi-sw.js', { scope: './' }).then(function () {
+    if (navigator.serviceWorker.controller) return; // already tried and still not isolated
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (sessionStorage.getItem(KEY)) return;
+      try { sessionStorage.setItem(KEY, '1'); } catch (e) {}
+      location.reload();
+    });
+  }).catch(function () {});
+})();
+</script>
 <script src="jsfs.js"></script>
+<script src="fsbridge.js"></script>
 <script src="wasm_exec.js"></script>
 <script src="proc.js"></script>
 <script src="vnet.js"></script>

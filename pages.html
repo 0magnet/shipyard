@@ -9,7 +9,28 @@
 <div id="desktop"></div>
 <pre id="boot"></pre>
 <div id="note">Offline Go workstation, running entirely in this tab from the seeded standard library — no server. Try the <b>“What the Go Playground can't do”</b> gallery (top right): each button launches a small Go program in the desk below that breaks a Playground limitation — a real filesystem, a network (a Go server and a Go client over an in-tab virtual loopback), processes and pipes, a real wall clock, an animated GUI, and the Go toolchain itself compiling here. Everything here works client-side; browsing the <em>live</em> web and external deps need <code>go run ./serve</code> — see the <a href="https://github.com/0magnet/shipyard">repo</a>.</div>
+<script>
+// Cross-origin isolation, without a server that can set headers. SharedArrayBuffer
+// — and so fsbridge, and so compiles that do not freeze the tab — is only granted
+// to a cross-origin-isolated page, and GitHub Pages cannot send COOP/COEP. coi-sw.js
+// adds them to its own responses; this reloads once, after the worker takes control,
+// because the FIRST navigation came from Pages without them. Guarded so a browser
+// where it cannot work reloads once and then stops.
+(function () {
+  if (window.crossOriginIsolated || !('serviceWorker' in navigator)) return;
+  var KEY = 'coi-sw-reloaded';
+  navigator.serviceWorker.register('coi-sw.js', { scope: './' }).then(function () {
+    if (navigator.serviceWorker.controller) return; // already tried and still not isolated
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (sessionStorage.getItem(KEY)) return;
+      try { sessionStorage.setItem(KEY, '1'); } catch (e) {}
+      location.reload();
+    });
+  }).catch(function () {});
+})();
+</script>
 <script src="jsfs.js"></script>
+<script src="fsbridge.js"></script>
 <script src="wasm_exec.js"></script>
 <script src="proc.js"></script>
 <script src="vnet.js"></script>

@@ -34,7 +34,7 @@ fi
 ( cd .shipwright && ./build.sh )
 
 for f in go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm vet-proc.wasm \
-         jsfs.js proc.js wasm_exec.js; do
+         jsfs.js fsbridge.js proc.js wasm_exec.js; do
 	cp ".shipwright/$f" .
 done
 
