@@ -6,7 +6,7 @@ gives it the Go toolchain. shipyard is where you sit down and use them: a shell
 where you type `go build`, on the same in-memory filesystem the compiler reads,
 with the browser to view what you make.
 
-**[Live demo](https://0magnet.github.io/shipyard/)** — `go` is already on the PATH; type `cd /work && go build .` and run what comes out, or click a demo to watch it break a Go Playground limitation.
+**[Live demo](https://shipyard.magnetosphere.net/)** — `go` is already on the PATH; type `cd /work && go build .` and run what comes out, or click a demo to watch it break a Go Playground limitation.
 
 ![shipyard in the browser](docs/shipyard-demo.png "a shell window with the Go toolchain on its PATH, beside the panel of things the Go Playground cannot do")
 
