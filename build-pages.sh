@@ -84,4 +84,9 @@ for f in shipyard.wasm browser.wasm server.wasm netclient.wasm fs.wasm timeconc.
          jsfs.js fsbridge.js proc.js wasm_exec.js vnet.js vnet-sw.js coi-sw.js toolchain.stamp demos.js demo.json stdsrc.json; do
 	cp "$f" _site/
 done
+# The custom domain. Pages here is built by a workflow, so the CNAME has to be
+# IN the uploaded artifact — a CNAME at the repo root is never published, which
+# is why setting one there left the domain unset.
+cp CNAME _site/
+
 echo "shipyard/pages: _site ready ($(du -sh _site | cut -f1)) — deploy its contents to Pages"
