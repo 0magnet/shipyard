@@ -15,8 +15,14 @@
 
 	// ---- helpers ---------------------------------------------------------
 	const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-	// The terminal is the first winbox body (created before any `run` window).
-	const termBody = () => document.querySelector("#desktop .wb-body");
+	// The terminal window, found by what is IN it rather than by where it sits.
+	// It used to be "the first winbox body", which held only while the terminal
+	// was opened once at boot and could never be replaced; a terminal reopened
+	// from the desk launcher is appended after every window that outlived it.
+	const termBody = () => {
+		const x = document.querySelector("#desktop .wb-body .xterm");
+		return x ? x.closest(".wb-body") : document.querySelector("#desktop .wb-body");
+	};
 	const termText = () => { const b = termBody(); return b ? (b.textContent || "") : ""; };
 	const submit = (line) => { if (window.__shipyardSubmit) window.__shipyardSubmit(line); };
 
