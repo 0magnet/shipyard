@@ -17,9 +17,15 @@ import (
 	"syscall/js"
 
 	"github.com/0magnet/netscrape"
+
+	"github.com/0magnet/shipyard/internal/wasmgc"
 )
 
 func main() {
+	// The browser window outlives everything it renders, so its heap peak is
+	// paid for the life of the tab. See internal/wasmgc.
+	wasmgc.Tune()
+
 	doc := js.Global().Get("document")
 	// shipyard's proc layer opens a fresh winbox window and passes its mount
 	// element id in $SHIPYARD_MOUNT; a direct host may set globalThis.__shipyardMount
