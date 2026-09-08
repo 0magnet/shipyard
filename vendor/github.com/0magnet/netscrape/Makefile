@@ -5,7 +5,7 @@
 # thing here as in 0pcom/skywire, which is the reference for these repos.
 # .golangci.yml is copied from there.
 
-PROJECT_BASE := github.com/0magnet/xterm-go
+PROJECT_BASE := github.com/0magnet/netscrape
 OPTS ?= GO111MODULE=on
 
 # Whether the host checks run with cgo. 0 matches skywire, which is pure Go.
