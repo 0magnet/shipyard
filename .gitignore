@@ -14,3 +14,9 @@ _site/
 *.log
 fsbridge.js
 toolchain.stamp
+
+# The *.wasm rule above also covers vendor/: desk embeds its own built demo
+# (docs/*.wasm, ~7MB) so that `desk serve` needs nothing to host, and no build
+# here reads it. `go mod vendor` writes it, git keeps it out, and the embed is
+# a whole directory — so a fresh clone builds with the rest of docs/ and
+# without the two binaries.

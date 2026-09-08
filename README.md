@@ -16,15 +16,22 @@ The pieces, and who does what:
 - **shipwright** — `cmd/go` + `cmd/compile`/`asm`/`link`, built for js/wasm.
 - **websh** — the terminal (a Go/wasm shell on xterm).
 - **netscrape** — the browser, for viewing what you serve on the vnet.
-- **winbox-go** — the windowing the desk is made of.
+- **desk** — the window manager: a panel with a task button per window, and a
+  launcher of everything that can be opened, so a window that is closed can be
+  opened again.
+- **winbox-go** — the windowing desk is made of.
 
 ## What works today (milestones 1–3)
 
 **A terminal window where you type `go build`.** shipyard opens a websh terminal
-in a [winbox](https://github.com/0magnet/winbox-go) window, its shell running
-over `afero.NewOsFs()` — which on js/wasm *is* bottle's jsfs — with `go` on its
-PATH. Because the shell and the toolchain share one filesystem, and websh execs
-a filesystem program as a child wasm process through bottle's proc, the
+in a [desk](https://github.com/0magnet/desk) window, its shell running over
+`afero.NewOsFs()` — which on js/wasm *is* bottle's jsfs — with `go` on its PATH.
+The terminal is a registered desk app rather than a window opened once at boot,
+so the Applications menu opens another one and the panel keeps a button for
+each: closing the terminal is no longer the end of the session.
+
+Because the shell and the toolchain share one filesystem, and websh execs a
+filesystem program as a child wasm process through bottle's proc, the
 toolchain runs as an ordinary command you type at the prompt:
 
     $ go version
@@ -90,7 +97,7 @@ instantiating another wasm module.
 - **✓ Milestone 2 — the terminal window.** websh's `web.Session` in a winbox
   window, `go build` typed at the prompt.
 - **✓ Milestone 3 — run what you build.** The `run` command spawns a compiled
-  wasm program into its own winbox window (its mount element id arrives in
+  wasm program into its own desk window (its mount element id arrives in
   `$SHIPYARD_MOUNT`), so `go build -o clock.wasm . && run clock.wasm` opens a
   live UI. Headless-verified: build a GUI program in the terminal, run it, and
   a second window draws its output.

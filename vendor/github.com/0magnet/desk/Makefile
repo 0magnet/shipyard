@@ -1,11 +1,11 @@
 .DEFAULT_GOAL := help
-.PHONY: help format tidy lint vet test test-wasm test-browser cover check install-linters docs dist
+.PHONY: help format tidy lint vet test test-wasm test-browser cover check install-linters docs
 
 # The targets that matter are `format` and `check`, and they mean the same
 # thing here as in 0pcom/skywire, which is the reference for these repos.
 # .golangci.yml is copied from there.
 
-PROJECT_BASE := github.com/0magnet/winbox-go
+PROJECT_BASE := github.com/0magnet/desk
 OPTS ?= GO111MODULE=on
 
 # Whether the host checks run with cgo. 0 matches skywire, which is pure Go.
@@ -178,11 +178,3 @@ install-linters: ## Install the linters
 
 docs: ## Regenerate the dependency graph and code counts in the README
 	./gendocs.sh
-
-dist: ## Rebuild the COMMITTED dist/ assets (winbox.wasm.gz + winbox-exec.js) from cmd/winbox-js. Needs tinygo. Deterministic gzip (-n) so an unchanged module yields no diff.
-	@command -v tinygo >/dev/null 2>&1 || { echo "tinygo not installed"; exit 1; }
-	GOTOOLCHAIN=$$(sh scripts/tinygo-toolchain.sh) tinygo build -o /tmp/winbox-dist.wasm -target wasm -no-debug -opt=z ./cmd/winbox-js
-	gzip -9 -n -c /tmp/winbox-dist.wasm > ./dist/winbox.wasm.gz
-	rm -f /tmp/winbox-dist.wasm
-	@sh ./scripts/wrap-wasm-exec.sh "$$(tinygo env TINYGOROOT)/targets/wasm_exec.js" ./dist/winbox-exec.js
-	@echo "updated dist/ (winbox.wasm.gz + winbox-exec.js) — review with 'git status', commit intentionally."

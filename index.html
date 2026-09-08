@@ -2,7 +2,8 @@
 <style>
   html,body{margin:0;height:100%;background:#0e0c14;color:#cdd2da;font:13px/1.5 ui-monospace,monospace;overflow:hidden}
   #desktop{position:absolute;inset:0}
-  #boot{position:absolute;left:1em;bottom:.6em;color:#7a8290;z-index:0;white-space:pre}
+  /* clear of the desk panel along the bottom (desk.PanelHeight is 34px) */
+  #boot{position:absolute;left:1em;bottom:calc(.6em + 34px);color:#7a8290;z-index:0;white-space:pre}
 </style>
 <div id="desktop"></div>
 <pre id="boot"></pre>

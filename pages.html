@@ -2,8 +2,9 @@
 <style>
   html,body{margin:0;height:100%;background:#0e0c14;color:#cdd2da;font:13px/1.5 ui-monospace,monospace;overflow:hidden}
   #desktop{position:absolute;inset:0}
-  #boot{position:absolute;left:1em;bottom:1.8em;color:#7a8290;z-index:0;white-space:pre}
-  #note{position:absolute;left:1em;bottom:.5em;color:#5a6270;z-index:0}
+  /* clear of the desk panel along the bottom (desk.PanelHeight is 34px) */
+  #boot{position:absolute;left:1em;bottom:calc(1.8em + 34px);color:#7a8290;z-index:0;white-space:pre}
+  #note{position:absolute;left:1em;bottom:calc(.5em + 34px);color:#5a6270;z-index:0}
   #note a{color:#9d7cff}
 </style>
 <div id="desktop"></div>
