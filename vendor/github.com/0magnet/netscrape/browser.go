@@ -556,6 +556,7 @@ func addTab(url string) {
 
 	onClick(t.btn, func() { activate(indexOf(t)) })
 	onClick(x, func() { closeTab(indexOf(t)) })
+	wireTabDrag(t)
 	// Middle-click closes a tab, as everywhere else.
 	t.btn.Call("addEventListener", "auxclick", js.FuncOf(func(_ js.Value, a []js.Value) any {
 		if len(a) > 0 && a[0].Get("button").Int() == 1 {
@@ -684,7 +685,8 @@ func Open(root js.Value) {
 		return nil
 	}))
 	goBtn := btn("Go", "padding:2px 8px")
-	for _, el := range []js.Value{back, fwd, reload, addr, goBtn} {
+	proxyBtn, proxyRow := proxyPanel()
+	for _, el := range []js.Value{back, fwd, reload, addr, goBtn, proxyBtn} {
 		bar.Call("appendChild", el)
 	}
 
@@ -693,6 +695,7 @@ func Open(root js.Value) {
 
 	root.Call("appendChild", strip)
 	root.Call("appendChild", bar)
+	root.Call("appendChild", proxyRow)
 	root.Call("appendChild", views)
 
 	onClick(goBtn, func() {
@@ -822,8 +825,20 @@ func Navigate(url string) {
 // NewTab opens url in a new tab. With background true the current tab keeps
 // focus — the browser-style "open in background tab" a host uses to preload
 // secondary pages behind the one the user is looking at. A no-op before Open.
+//
+// The first host-driven tab REPLACES the start page rather than joining it.
+// Open has to show something, so it opens the built-in page; a host that then
+// names its own first page (the visor desk opens its hypervisor UI) was left
+// with a "new tab" nobody asked for sitting first in the strip. The
+// replacement happens only while that tab is still the untouched start page —
+// one tab, no history — so a person who has begun using it keeps it.
 func NewTab(url string, background bool) {
 	if doc.IsUndefined() {
+		return
+	}
+	if len(tabs) == 1 && isUntouchedStart(tabs[0]) {
+		navigate(tabs[0], url)
+		activate(0)
 		return
 	}
 	prev := active
@@ -831,4 +846,215 @@ func NewTab(url string, background bool) {
 	if background && prev >= 0 && prev < len(tabs) {
 		activate(prev)
 	}
+}
+
+// isUntouchedStart reports whether t is still the tab Open created and nobody
+// has used: its only history entry is the start page.
+func isUntouchedStart(t *tab) bool {
+	return t != nil && len(t.hist) == 1 && t.pos == 0 && t.hist[0] == home()
+}
+
+// TabStrip returns the tab strip element once Open has built it, so a host can
+// move it out of the browser's own box — into its window's title bar, where a
+// browser keeps its tabs, level with the window controls. The strip keeps
+// working wherever it lives: tabs are wired to their frames, not to their
+// parent. Undefined before Open.
+func TabStrip() js.Value {
+	return strip
+}
+
+// dragging is the tab being dragged across the strip, nil between drags.
+var dragging *tab
+
+// wireTabDrag lets a tab be picked up and dropped on another to reorder them,
+// the way every browser's strip works. HTML5 drag events, not pointer math:
+// the strip may live in a window's title bar whose own pointer handler moves
+// the window, and a native drag does not start one of those.
+func wireTabDrag(t *tab) {
+	t.btn.Set("draggable", true)
+	t.btn.Call("addEventListener", "dragstart", js.FuncOf(func(_ js.Value, a []js.Value) any {
+		dragging = t
+		if len(a) > 0 {
+			if dt := a[0].Get("dataTransfer"); dt.Truthy() {
+				dt.Set("effectAllowed", "move")
+				// Some engines cancel the drag with an empty payload.
+				dt.Call("setData", "text/plain", labelFor(t.hist[t.pos]))
+			}
+		}
+		return nil
+	}))
+	t.btn.Call("addEventListener", "dragover", js.FuncOf(func(_ js.Value, a []js.Value) any {
+		if dragging != nil && dragging != t && len(a) > 0 {
+			a[0].Call("preventDefault") // allow the drop
+			if dt := a[0].Get("dataTransfer"); dt.Truthy() {
+				dt.Set("dropEffect", "move")
+			}
+		}
+		return nil
+	}))
+	t.btn.Call("addEventListener", "drop", js.FuncOf(func(_ js.Value, a []js.Value) any {
+		if len(a) > 0 {
+			a[0].Call("preventDefault")
+		}
+		if dragging != nil && dragging != t {
+			moveTab(indexOf(dragging), indexOf(t))
+		}
+		dragging = nil
+		return nil
+	}))
+	t.btn.Call("addEventListener", "dragend", js.FuncOf(func(_ js.Value, _ []js.Value) any {
+		dragging = nil
+		return nil
+	}))
+}
+
+// moveTab moves the tab at from to position to, in the slice and in the strip,
+// keeping the active tab active.
+func moveTab(from, to int) {
+	if from < 0 || to < 0 || from >= len(tabs) || to >= len(tabs) || from == to {
+		return
+	}
+	cur := tabs[active]
+	t := tabs[from]
+	tabs = append(tabs[:from], tabs[from+1:]...)
+	rest := append([]*tab{}, tabs[to:]...)
+	tabs = append(append(tabs[:to], t), rest...)
+	// Re-place the button before the one now following it, or before the +
+	// button when it moved to the end.
+	if to+1 < len(tabs) {
+		strip.Call("insertBefore", t.btn, tabs[to+1].btn)
+	} else {
+		strip.Call("insertBefore", t.btn, strip.Get("lastChild"))
+	}
+	active = indexOf(cur)
+}
+
+// Proxy setting. netscrape does not carry traffic itself — the host's
+// __netscrapeFetch does — so the proxy control is a published preference the
+// host reads: globalThis.__netscrapeProxy = {mode, exit}. mode is "auto" (the
+// host's default exit), "exit" (the named skysocks exit PK) or "direct" (the
+// host egresses itself, no anonymity). It persists in localStorage so a
+// person's choice survives a reload, the way a browser's proxy setting does.
+const proxyStoreKey = "netscrape.proxy"
+
+var (
+	proxyMode = "auto"
+	proxyExit = ""
+)
+
+// Proxy reports the current proxy preference: mode and, for mode "exit", the
+// exit public key (hex).
+func Proxy() (mode, exit string) { return proxyMode, proxyExit }
+
+func loadProxy() {
+	ls := js.Global().Get("localStorage")
+	if !ls.Truthy() {
+		return
+	}
+	raw := ls.Call("getItem", proxyStoreKey)
+	if raw.Type() != js.TypeString || raw.String() == "" {
+		publishProxy()
+		return
+	}
+	obj := js.Global().Get("JSON").Call("parse", raw.String())
+	if m := obj.Get("mode"); m.Type() == js.TypeString {
+		proxyMode = m.String()
+	}
+	if e := obj.Get("exit"); e.Type() == js.TypeString {
+		proxyExit = e.String()
+	}
+	publishProxy()
+}
+
+func saveProxy() {
+	if ls := js.Global().Get("localStorage"); ls.Truthy() {
+		ls.Call("setItem", proxyStoreKey, `{"mode":"`+proxyMode+`","exit":"`+proxyExit+`"}`)
+	}
+	publishProxy()
+}
+
+func publishProxy() {
+	obj := js.Global().Get("Object").New()
+	obj.Set("mode", proxyMode)
+	obj.Set("exit", proxyExit)
+	js.Global().Set("__netscrapeProxy", obj)
+}
+
+// proxyPanel builds the ⚙ button and the settings row it toggles: a mode
+// selector and, for "exit", a field for the exit PK. Returns the button (for
+// the address bar) and the panel (for below it).
+func proxyPanel() (button, panel js.Value) {
+	button = btn("⚙", "padding:2px 8px")
+	button.Set("title", "proxy settings")
+	panel = mk("div")
+	panel.Get("style").Set("cssText", "display:none;gap:8px;align-items:center;padding:4px 6px;background:#100d18;border-bottom:1px solid #2a2342;font:12px monospace;color:#cdd2da")
+	label := mk("span")
+	label.Set("textContent", "clearnet pages via")
+	sel := mk("select")
+	sel.Get("style").Set("cssText", "background:#0e0c14;color:#cdd2da;border:1px solid #2a2342;font:12px monospace;padding:1px 4px")
+	for _, o := range [][2]string{{"auto", "auto (host's default exit)"}, {"exit", "a skysocks exit"}, {"direct", "direct (this visor egresses, not anonymous)"}} {
+		opt := mk("option")
+		opt.Set("value", o[0])
+		opt.Set("textContent", o[1])
+		sel.Call("appendChild", opt)
+	}
+	exit := mk("input")
+	exit.Set("spellcheck", false)
+	exit.Set("placeholder", "exit public key (66 hex)")
+	exit.Get("style").Set("cssText", "flex:1;background:#0e0c14;color:#cdd2da;border:1px solid #2a2342;padding:1px 6px;font:12px monospace")
+	status := mk("span")
+	status.Get("style").Set("cssText", "opacity:.7")
+	sync := func() {
+		sel.Set("value", proxyMode)
+		exit.Set("value", proxyExit)
+		if proxyMode == "exit" {
+			exit.Get("style").Set("display", "")
+		} else {
+			exit.Get("style").Set("display", "none")
+		}
+		switch {
+		case proxyMode == "exit" && !isPK(proxyExit):
+			status.Set("textContent", "needs a 66-hex public key")
+		default:
+			status.Set("textContent", "")
+		}
+	}
+	sel.Call("addEventListener", "change", js.FuncOf(func(_ js.Value, _ []js.Value) any {
+		proxyMode = sel.Get("value").String()
+		saveProxy()
+		sync()
+		return nil
+	}))
+	exit.Call("addEventListener", "change", js.FuncOf(func(_ js.Value, _ []js.Value) any {
+		proxyExit = strings.TrimSpace(exit.Get("value").String())
+		saveProxy()
+		sync()
+		return nil
+	}))
+	onClick(button, func() {
+		if panel.Get("style").Get("display").String() == "none" {
+			panel.Get("style").Set("display", "flex")
+		} else {
+			panel.Get("style").Set("display", "none")
+		}
+	})
+	for _, el := range []js.Value{label, sel, exit, status} {
+		panel.Call("appendChild", el)
+	}
+	loadProxy()
+	sync()
+	return button, panel
+}
+
+// isPK reports whether s looks like a compressed secp256k1 public key in hex.
+func isPK(s string) bool {
+	if len(s) != 66 || (s[:2] != "02" && s[:2] != "03") {
+		return false
+	}
+	for _, c := range s[2:] {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
