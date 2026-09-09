@@ -43,7 +43,10 @@ window.addEventListener("error", function(e){ if(e.message && /already exited/.t
   jsfs.writeFile("/goroot/VERSION", "go1.27.0\n");
   log("seeding std source…");
   const std = await (await fetch("stdsrc.json")).json();
-  let n=0; for(const p in std){ jsfs.writeFile(p, Uint8Array.from(atob(std[p]),c=>c.charCodeAt(0))); n++; }
+  // See pages.html: Uint8Array.from(s, fn) calls back per BYTE and costs ~40x
+  // what the plain loop does on a standard library's worth of base64.
+  const b64 = (s) => { const t = atob(s), u = new Uint8Array(t.length); for (let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); return u; };
+  let n=0; for(const p in std){ jsfs.writeFile(p, b64(std[p])); n++; }
   log("seeded "+n+" std files, /bin/go, and the tools\n");
 
   // A program to build from the shell.
