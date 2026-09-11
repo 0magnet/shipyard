@@ -8,8 +8,8 @@ github.com/0magnet/sh/v3 v3.13.2-0.20260818190530-13d0024da85c h1:qKcMe7/qRLFPbk
 github.com/0magnet/sh/v3 v3.13.2-0.20260818190530-13d0024da85c/go.mod h1:IdyC3iqIKArn4KOl0a58dV2spH0PH6pLJKOZYB2kFR0=
 github.com/0magnet/u-root v0.16.1-0.20260814161052-156e0b67262b h1:1p4E2ok/rmNJU2LsGx6iMl0bIAMgl1QOC2H8doC+9ww=
 github.com/0magnet/u-root v0.16.1-0.20260814161052-156e0b67262b/go.mod h1:fId14v+rNp1A0ZKHJPZZyiu9dfgWKEs7nbyvKrku3bo=
-github.com/0magnet/websh v0.0.0-20260910095218-3d6d74ccedfc h1:30xvuSwuhrbGdY7GszBkQfbhyy5uN+Xqga6TtLB6OS4=
-github.com/0magnet/websh v0.0.0-20260910095218-3d6d74ccedfc/go.mod h1:9VdrB3ebbb6bQLciQzs5ywnLdpzURkyyqAA+j25Zvf8=
+github.com/0magnet/websh v0.0.0-20260910095512-6bcad1d93e01 h1:IKy54vk2DaOwMogqjAwGoZXzNu4bcnn9LRLtpzWLRW0=
+github.com/0magnet/websh v0.0.0-20260910095512-6bcad1d93e01/go.mod h1:9VdrB3ebbb6bQLciQzs5ywnLdpzURkyyqAA+j25Zvf8=
 github.com/0magnet/winbox-go v0.0.0-20260908011106-113d480c4188 h1:NY8NY7qUThHl9fc4IRUefZMFtBQ0M82A1rKL2IiiTFA=
 github.com/0magnet/winbox-go v0.0.0-20260908011106-113d480c4188/go.mod h1:19+/rRQWd/tc9/8CFcUr6C+3AipeZmHyyda2tVombe4=
 github.com/0magnet/xterm-go v0.0.0-20260910002153-8f449d30e0f4 h1:n28yCu7bnLCMQ98B4EHMKpaCc1Tl91um90aEFpenx0I=
