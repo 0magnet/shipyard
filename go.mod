@@ -4,7 +4,7 @@ go 1.27
 
 require (
 	github.com/0magnet/afero v1.15.1-0.20260816202415-9f9d46a34dcd
-	github.com/0magnet/desk v0.0.0-20260910005425-be63baa02041
+	github.com/0magnet/desk v0.0.0-20260912154728-bfe10d475353
 	github.com/0magnet/netscrape v0.0.0-20260910002431-4317eab0bb2d
 	github.com/0magnet/sh/v3 v3.13.2-0.20260818190530-13d0024da85c
 	github.com/0magnet/websh v0.0.0-20260910095512-6bcad1d93e01
