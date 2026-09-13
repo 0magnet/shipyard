@@ -1,7 +1,7 @@
 github.com/0magnet/afero v1.15.1-0.20260816202415-9f9d46a34dcd h1:zhADHH+Lu7o4U14ATjhRP9m1hhJ2BBuCtQLUmVmYg2g=
 github.com/0magnet/afero v1.15.1-0.20260816202415-9f9d46a34dcd/go.mod h1:JsJ3c6VwVpJOB3qUpT6YzgJ8yC+nBLUCcH2nhGLC6fA=
-github.com/0magnet/desk v0.0.0-20260910005425-be63baa02041 h1:EJt4ehaW++UHvoM3eECbvgifspFc3DZGNQIJLRR+iYY=
-github.com/0magnet/desk v0.0.0-20260910005425-be63baa02041/go.mod h1:L+8Y1fP55UjK6RFOG0iAsR9oO6zXidCr9LZJy+8oN/k=
+github.com/0magnet/desk v0.0.0-20260912154728-bfe10d475353 h1:MGlyWBEOxrafk2DMaJVgAyTWG/8k3q2IV1hr1PRTE8A=
+github.com/0magnet/desk v0.0.0-20260912154728-bfe10d475353/go.mod h1:L+8Y1fP55UjK6RFOG0iAsR9oO6zXidCr9LZJy+8oN/k=
 github.com/0magnet/netscrape v0.0.0-20260910002431-4317eab0bb2d h1:lHHWnvMOSM25S3RnxsoTkF3Hzwpqqqg0Tzdx7TnyM60=
 github.com/0magnet/netscrape v0.0.0-20260910002431-4317eab0bb2d/go.mod h1:8KUKD6yyp1VhFqWG8MYA+xM9CD+6cdjoNoXrhP/QMOM=
 github.com/0magnet/sh/v3 v3.13.2-0.20260818190530-13d0024da85c h1:qKcMe7/qRLFPbk/HWEYy5QuYY+luINKnlen9BhDPRZU=
