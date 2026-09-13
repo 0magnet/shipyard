@@ -1,4 +1,23 @@
 <!doctype html><meta charset="utf-8"><title>shipyard — a Go workstation in a tab</title>
+<!-- seo:begin -->
+<meta name="description" content="The Go compiler on the PATH of a shell in your browser tab. Type go build against an in-memory filesystem and run what comes out — no server, no container, no emulator.">
+<meta name="author" content="0magnet">
+<link rel="canonical" href="https://shipyard.magnetosphere.net/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="magnetosphere">
+<meta property="og:title" content="shipyard — a Go workstation in a browser tab">
+<meta property="og:description" content="The Go compiler on the PATH of a shell in your browser tab. Type go build against an in-memory filesystem and run what comes out — no server, no container, no emulator.">
+<meta property="og:url" content="https://shipyard.magnetosphere.net/">
+<meta property="og:image" content="https://shipyard.magnetosphere.net/shipyard-demo.png">
+<meta property="og:image:alt" content="A shell window with the Go toolchain on its PATH, beside a panel of programs that break Go Playground limitations">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="shipyard — a Go workstation in a browser tab">
+<meta name="twitter:description" content="The Go compiler on the PATH of a shell in your browser tab. Type go build against an in-memory filesystem and run what comes out — no server, no container, no emulator.">
+<meta name="twitter:image" content="https://shipyard.magnetosphere.net/shipyard-demo.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","applicationCategory":"DeveloperApplication","author":{"@type":"Person","name":"0magnet"},"browserRequirements":"Requires WebAssembly","description":"The Go compiler on the PATH of a shell in your browser tab. Type go build against an in-memory filesystem and run what comes out — no server, no container, no emulator.","image":"https://shipyard.magnetosphere.net/shipyard-demo.png","isAccessibleForFree":true,"name":"shipyard — a Go workstation in a browser tab","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"operatingSystem":"Any (modern web browser)","sameAs":"https://github.com/0magnet/shipyard","url":"https://shipyard.magnetosphere.net/"}
+</script>
+<!-- seo:end -->
 <style>
   html,body{margin:0;height:100%;background:#0e0c14;color:#cdd2da;font:13px/1.5 ui-monospace,monospace;overflow:hidden}
   #desktop{position:absolute;inset:0}
@@ -7,6 +26,14 @@
   #note{position:absolute;left:1em;bottom:calc(.5em + 34px);color:#5a6270;z-index:0}
   #note a{color:#9d7cff}
 </style>
+<!-- seo:begin -->
+<div style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
+<h1>shipyard — a Go workstation in a browser tab</h1>
+<p>An offline Go development environment that runs entirely client-side in WebAssembly. A bash-like shell, an in-memory filesystem, processes and pipes, a virtual network, and the real Go toolchain — cmd/go driving cmd/compile, cmd/asm and cmd/link — all compiled to wasm and running in the page.</p>
+<p>Type cd /work &amp;&amp; go build . and run the binary you just produced, in the same tab. Nothing after page load touches a server. The demo gallery launches small Go programs that each break a limitation of the Go Playground: a real filesystem, a real wall clock, a network with a Go server and a Go client over in-tab loopback, processes and pipes, an animated GUI, and the compiler itself building code here.</p>
+<p>Source code: <a href="https://github.com/0magnet/shipyard">github.com/0magnet/shipyard</a>. More Go and WebAssembly projects: <a href="https://magnetosphere.net/software">magnetosphere.net/software</a>.</p>
+</div>
+<!-- seo:end -->
 <div id="desktop"></div>
 <pre id="boot"></pre>
 <div id="note">Offline Go workstation, running entirely in this tab from the seeded standard library — no server. Try the <b>“What the Go Playground can't do”</b> gallery (top right): each button launches a small Go program in the desk below that breaks a Playground limitation — a real filesystem, a network (a Go server and a Go client over an in-tab virtual loopback), processes and pipes, a real wall clock, an animated GUI, and the Go toolchain itself compiling here. Everything here works client-side; browsing the <em>live</em> web and external deps need <code>go run ./serve</code> — see the <a href="https://github.com/0magnet/shipyard">repo</a>.</div>

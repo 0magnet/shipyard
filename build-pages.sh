@@ -89,4 +89,11 @@ done
 # is why setting one there left the domain unset.
 cp CNAME _site/
 
+# The crawler files and the social-preview image are in the artifact for the
+# same reason: anything a search engine or a link unfurler asks for by URL has
+# to be uploaded, not merely committed. The page's og:image points at
+# /shipyard-demo.png, and a preview image that 404s is worse than none at all.
+cp robots.txt sitemap.xml _site/
+cp docs/shipyard-demo.png _site/
+
 echo "shipyard/pages: _site ready ($(du -sh _site | cut -f1)) — deploy its contents to Pages"

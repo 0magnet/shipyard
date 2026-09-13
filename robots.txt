@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://shipyard.magnetosphere.net/sitemap.xml
