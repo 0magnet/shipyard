@@ -51,13 +51,16 @@ cat go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm vet-proc.wasm \
 echo "shipyard: toolchain.stamp = $(cat toolchain.stamp)"
 
 # vnet.js (the page's virtual loopback) comes from bottle — the seam the desk's
-# in-tab server and browser reach each other through.
+# in-tab server and browser reach each other through. So does coi-sw.js, which
+# makes the page cross-origin isolated on a host that cannot set headers: this
+# repo carried its own copy until bottle grew one, and a second copy is how the
+# two drift.
 if [ ! -d .bottle ]; then
 	git clone --depth 1 https://github.com/0magnet/bottle .bottle
 else
 	( cd .bottle && git pull -q --ff-only )
 fi
-cp .bottle/vnet.js .bottle/vnet-sw.js .
+cp .bottle/vnet.js .bottle/vnet-sw.js .bottle/coi-sw.js .
 
 # demo.json: the whole demo module's source, seeded into the tab at /work/demo
 # so the desk can view and rebuild any gallery demo.
