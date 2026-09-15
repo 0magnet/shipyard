@@ -8,6 +8,7 @@ proc.js
 wasm_exec.js
 vnet.js
 vnet-sw.js
+coi-sw.js
 .shipwright/
 .bottle/
 _site/
