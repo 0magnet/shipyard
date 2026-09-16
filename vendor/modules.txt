@@ -3,11 +3,11 @@
 github.com/0magnet/afero
 github.com/0magnet/afero/internal/common
 github.com/0magnet/afero/mem
-# github.com/0magnet/desk v0.0.0-20260914105004-76463198b217
+# github.com/0magnet/desk v0.0.0-20260915183806-a236d7492c93
 ## explicit; go 1.26
 github.com/0magnet/desk
 github.com/0magnet/desk/dom
-# github.com/0magnet/netscrape v0.0.0-20260913215348-9ad8ff994b83
+# github.com/0magnet/netscrape v0.0.0-20260915192127-4908689b2961
 ## explicit; go 1.24
 github.com/0magnet/netscrape
 # github.com/0magnet/sh/v3 v3.13.2-0.20260818190530-13d0024da85c
@@ -21,18 +21,18 @@ github.com/0magnet/sh/v3/syntax
 # github.com/0magnet/u-root v0.16.1-0.20260814161052-156e0b67262b
 ## explicit; go 1.25.7
 github.com/0magnet/u-root/pkg/ls
-# github.com/0magnet/websh v0.0.0-20260914105251-9f3f0b910116
+# github.com/0magnet/websh v0.0.0-20260916100640-e79baee36b7f
 ## explicit; go 1.26.0
 github.com/0magnet/websh/shell
 github.com/0magnet/websh/web
-# github.com/0magnet/winbox-go v0.0.0-20260913215348-e6a682de3c9b
+# github.com/0magnet/winbox-go v0.0.0-20260915183431-ca6572e4c323
 ## explicit; go 1.24
 github.com/0magnet/winbox-go
-# github.com/0magnet/xterm-go v0.0.0-20260913215439-50280f9bd203
+# github.com/0magnet/xterm-go v0.0.0-20260915170035-1ea079f51d60
 ## explicit; go 1.24
 github.com/0magnet/xterm-go
 github.com/0magnet/xterm-go/vt
-# github.com/benhoyt/goawk v1.31.0
+# github.com/benhoyt/goawk v1.32.0
 ## explicit; go 1.20
 github.com/benhoyt/goawk/internal/ast
 github.com/benhoyt/goawk/internal/compiler
