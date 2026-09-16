@@ -75,6 +75,9 @@ func setup() {
 		return nil
 	}), js.Undefined())
 
+	// Clicks inside framed windows raise them. See wireFrameFocus.
+	wireFrameFocus()
+
 	addListener(body, "mousedown", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		windowClicked = false
 		return nil
@@ -404,6 +407,15 @@ func addWindowListener(w *WinBox, dir string) {
 	mousedownFn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		event := args[0]
 
+		// A press on a control that lives in the title bar — a tab, a button —
+		// is that control's, not the start of a drag. Leave the event alone so
+		// it reaches the control and its click can form; raising the window is
+		// still right, a press anywhere on a window does that.
+		if t := event.Get("target"); t.Truthy() && pressIsOwned(t, node) {
+			w.Focus()
+			return nil
+		}
+
 		// prevent the full iteration through the fallback chain of a touch
 		// event (touch > mouse > click)
 		preventEvent(event, true)
@@ -473,6 +485,129 @@ func cancelFullscreen() bool {
 		// is that the promise callback runs before "onresize" fires
 		document.Call(prefixExit)
 		return true
+	}
+	return false
+}
+
+// Frames are made inert for the length of a drag by CSS, not by an overlay:
+// "body.wb-lock iframe { pointer-events: none }" in winbox.css, with wb-lock
+// added on mousedown and removed on mouseup. That is what keeps a pointer with
+// the button down from being captured by a frame — which would otherwise take
+// the mouseup with it and strand the drag.
+//
+// A viewport-covering shield element was added here for that job and removed
+// again: it duplicated this rule, and because it went up on mousedown it sat
+// under the pointer before the click completed. Every tab button lives inside
+// .wb-drag, so pressing one armed a drag and the mouseup landed on the sheet
+// instead of the button — no tab switching, and no new tabs, anywhere.
+
+// focusWindowOwning raises the window that contains el, if it is not already
+// the focused one. Walks up from el because the click reaches us from inside a
+// frame, which can sit any depth below the window body.
+func focusWindowOwning(el js.Value) {
+	for node := el; node.Truthy(); node = node.Get("parentElement") {
+		for i := len(stackWin) - 1; i >= 0; i-- {
+			if w := stackWin[i]; w.DOM.Truthy() && w.DOM.Equal(node) {
+				if !w.Focused {
+					w.Focus()
+				}
+				return
+			}
+		}
+	}
+}
+
+// wireFrameFocus makes a click INSIDE a frame raise the window holding it.
+//
+// A window whose content is an <iframe> could not be clicked to the front: a
+// frame is its own browsing context, mousedown does not cross it, and the
+// per-window body handler that raises a window therefore never fired. Only the
+// title bar and the resize edges — which are the window's own DOM — worked, so
+// a framed window looked like the one window you cannot click to the front.
+//
+// Focus is no substitute for the click. Moving into a frame does NOT fire blur
+// on this window (measured: focusing a frame left window.onblur silent), and
+// document.activeElement is already the frame whenever focus last landed there
+// — so a poll of it raises windows nobody clicked.
+//
+// What does work, for a SAME-ORIGIN frame, is listening inside it: its document
+// is reachable, and a capture-phase mousedown there is the click itself, with
+// nothing inferred and nothing swallowed. Every frame the desk puts in a window
+// is same-origin. A cross-origin frame stays as it was — unreachable by
+// construction, and not a case this manager has.
+//
+// Frames are wired as they appear (windows open long after this runs, and a
+// tab swaps its frame on navigation), so this observes the document and
+// re-wires on each load. Wiring is marked on the element to keep a re-render
+// from stacking listeners.
+func wireFrameFocus() {
+	var onMouseDown js.Func
+	onMouseDown = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) > 0 && args[0].Truthy() {
+			if t := args[0].Get("target"); t.Truthy() {
+				// The frame element, not the target inside it: the target
+				// belongs to the frame's document and has no parent chain
+				// leading to the window.
+				focusWindowOwning(this.Get("defaultView").Get("frameElement"))
+				return nil
+			}
+		}
+		return nil
+	})
+
+	attach := func(fr js.Value) {
+		if !fr.Truthy() || fr.Get("__wbFocusWired").Truthy() {
+			return
+		}
+		wire := js.FuncOf(func(js.Value, []js.Value) interface{} {
+			doc := fr.Get("contentDocument")
+			if !doc.Truthy() { // cross-origin, or not loaded yet
+				return nil
+			}
+			addListener(doc, "mousedown", onMouseDown, captureTrue)
+			return nil
+		})
+		addListener(fr, "load", wire, js.Undefined())
+		fr.Set("__wbFocusWired", true)
+		wire.Invoke() // already-loaded frames never fire load again
+	}
+
+	sweep := func() {
+		frames := document.Call("getElementsByTagName", "iframe")
+		for i := 0; i < frames.Get("length").Int(); i++ {
+			attach(frames.Index(i))
+		}
+	}
+
+	obs := js.Global().Get("MutationObserver")
+	if obs.Truthy() {
+		js.Global().Get("MutationObserver").New(js.FuncOf(func(js.Value, []js.Value) interface{} {
+			sweep()
+			return nil
+		})).Call("observe", document.Get("documentElement"),
+			map[string]interface{}{"childList": true, "subtree": true})
+	}
+	sweep()
+}
+
+// NoDragClass marks an element in a window's title bar that owns the presses
+// on it and on everything inside it. The bar is the drag handle, and its
+// mousedown listener runs in the capture phase — before anything a control
+// placed in the bar could do — and stops the event, so a tab strip or a
+// button put there could not be clicked: the press armed a window drag,
+// the release fell wherever the window had moved to, and no click formed.
+// A listener on the control cannot fix that from below; the drag handle
+// has to know to stand aside, and this class is how it is told.
+const NoDragClass = "wb-nodrag"
+
+// pressIsOwned reports whether target sits under a NoDragClass element that
+// is itself inside node, the drag handle. Walks parentNode rather than
+// calling closest so it works on the fake DOM the tests use as well.
+func pressIsOwned(target, node js.Value) bool {
+	for n := target; n.Truthy() && !n.Equal(node); n = n.Get("parentNode") {
+		if cl := n.Get("classList"); cl.Truthy() && cl.Call("contains", NoDragClass).Bool() {
+			return true
+		}
 	}
 	return false
 }

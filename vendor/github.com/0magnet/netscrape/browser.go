@@ -8,10 +8,6 @@ import (
 	"syscall/js"
 )
 
-const startPage = "data:text/html,<body style='font-family:sans-serif;padding:2em'>" +
-	"<h1>A browser, in Go</h1><p>The chrome is syscall/js. Each tab is an iframe. " +
-	"Use + for a new tab, or type a URL above.</p></body>"
-
 // home is the page a new tab opens. A host that has something of its own to
 // show — a demo site served beside the browser, a mesh index — sets
 // globalThis.__netscrapeStart to its URL; everyone else gets the built-in
@@ -20,7 +16,7 @@ func home() string {
 	if v := js.Global().Get("__netscrapeStart"); v.Type() == js.TypeString && v.String() != "" {
 		return v.String()
 	}
-	return startPage
+	return startURL
 }
 
 // navShim runs inside the sandboxed page. A sandboxed srcdoc has an opaque
@@ -83,6 +79,13 @@ type tab struct {
 	pos                  int
 	title                string // the page's own <title>, when it has one
 	loading              bool
+	// directSrc is the frame src this browser last set for a natively
+	// rendered page. A frame that reports a DIFFERENT URL navigated itself —
+	// the reader clicked a link inside it — which is the only way to notice,
+	// since that navigation never passes through this browser. See watchDirect.
+	directSrc string
+	// directNavWired guards the one-time load listener that notices it.
+	directNavWired bool
 }
 
 func mk(tag string) js.Value { return doc.Call("createElement", tag) }
@@ -112,7 +115,7 @@ func btn(label, style string) js.Value {
 // A generated page has no host worth showing, so it gets a plain word instead.
 func labelFor(url string) string {
 	switch {
-	case strings.HasPrefix(url, "data:"):
+	case url == startURL, strings.HasPrefix(url, "data:"):
 		return "new tab"
 	case strings.HasPrefix(url, "about:"), strings.HasPrefix(url, "blob:"):
 		return url
@@ -142,6 +145,29 @@ func labelFor(url string) string {
 // itself serves.
 var DirectLoader func(url string) (src string, ok bool)
 
+// DirectAddress is the inverse of DirectLoader, for DISPLAY. A frame the host
+// claimed navigates itself to more of the host's served URLs, and those are
+// the rewritten form — skywire's "<origin>/vnet/<port>/path" — which is an
+// implementation detail of how the host serves the page, not an address anyone
+// typed or could type. Showing it in the address bar (and recording it in
+// history) told the reader a path that does not exist as far as the mesh is
+// concerned.
+//
+// A host that rewrites URLs should map one back to the address it stands for
+// ("http://vnet:<port>/path"). Returning ok=false, or leaving this nil, keeps
+// the served URL, which is right for a host that does not rewrite.
+var DirectAddress func(src string) (url string, ok bool)
+
+// displayURL is DirectAddress with the identity fallback.
+func displayURL(src string) string {
+	if DirectAddress != nil {
+		if u, ok := DirectAddress(src); ok && u != "" {
+			return u
+		}
+	}
+	return src
+}
+
 // load renders a URL into a tab's iframe. A data:/about:/blob: URL goes straight
 // to the iframe; anything else — an http(s) page, or a bare host like
 // example.com or home.dmsg — goes through the transport (fetchPage), which lets
@@ -154,6 +180,13 @@ func load(t *tab, url string) {
 	// a strip where a whole URL never would.
 	if t != nil && t.lbl.Truthy() {
 		t.lbl.Set("textContent", labelFor(url))
+	}
+	if url == startURL {
+		renderStart(t)
+		if active >= 0 && tabs[active] == t {
+			addr.Set("value", "")
+		}
+		return
 	}
 	if strings.HasPrefix(url, "data:") || strings.HasPrefix(url, "about:") || strings.HasPrefix(url, "blob:") {
 		t.frame.Call("removeAttribute", "srcdoc")
@@ -169,7 +202,9 @@ func load(t *tab, url string) {
 				t.frame.Call("removeAttribute", "srcdoc")
 				t.frame.Call("removeAttribute", "sandbox")
 				setLoading(t, true)
+				t.directSrc = src
 				t.frame.Set("src", src)
+				watchDirectNav(t)
 				// A natively rendered page is same-origin, so its title and
 				// icon can simply be read once it has loaded — no transcoding
 				// pass to pick them out of.
@@ -258,7 +293,7 @@ func activate(i int) {
 			t.btn.Get("style").Set("background", "transparent")
 		}
 	}
-	addr.Set("value", tabs[i].hist[tabs[i].pos])
+	addr.Set("value", addrText(tabs[i].hist[tabs[i].pos]))
 	syncNav()
 }
 
@@ -378,6 +413,69 @@ func setFavicon(t *tab, iconURL string) {
 		return a[0].Call("arrayBuffer")
 	})
 	fetchVia(iconURL).Call("then", onResp).Call("then", onBuf).Call("catch", onErr)
+}
+
+// watchDirectNav records navigations the FRAME makes on its own.
+//
+// A natively rendered page is loaded by setting frame.src and is then its own
+// browsing context: a link the reader clicks inside it navigates that frame
+// directly, without passing through this browser at all. So the tab's history
+// never grew, Back stayed greyed out for the whole visit, and a reader who had
+// walked several pages deep into a doc tree had no way back — the one place
+// the button is most obviously wanted.
+//
+// The frame is same-origin by construction (DirectLoader only claims URLs the
+// host serves), so its location is readable, and every navigation fires load.
+// Anything that does not match the src this browser set is the frame moving
+// itself, and gets recorded as an ordinary history entry — replaying it later
+// works because DirectLoader claims the served form too.
+//
+// Wired once per tab. Reads can throw if the host sent the frame somewhere
+// cross-origin after all; that costs a history entry, not the tab.
+func watchDirectNav(t *tab) {
+	if t == nil || t.directNavWired || !t.frame.Truthy() {
+		return
+	}
+	t.directNavWired = true
+	t.frame.Call("addEventListener", "load", js.FuncOf(func(js.Value, []js.Value) any {
+		defer func() { recover() }() //nolint:errcheck // a cross-origin read is not fatal
+		w := t.frame.Get("contentWindow")
+		if !w.Truthy() {
+			return nil
+		}
+		href := w.Get("location").Get("href")
+		if href.Type() != js.TypeString {
+			return nil
+		}
+		cur := href.String()
+		if cur == "" || cur == "about:blank" || cur == t.directSrc {
+			return nil
+		}
+		// Also not a self-navigation when it matches where history already
+		// says we are: Back and Forward re-set the src, and a DirectLoader that
+		// hands back a different spelling than it was given would otherwise
+		// push a duplicate on every press and make Back walk in place.
+		if t.pos >= 0 && t.pos < len(t.hist) && (cur == t.hist[t.pos] || displayURL(cur) == t.hist[t.pos]) {
+			t.directSrc = cur
+			return nil
+		}
+		// The frame moved itself. Record it WITHOUT reloading: the page the
+		// entry names is already on screen. What is recorded and shown is the
+		// ADDRESS the served URL stands for — see DirectAddress.
+		t.directSrc = cur
+		shown := displayURL(cur)
+		if t.pos >= 0 && t.pos < len(t.hist)-1 {
+			t.hist = t.hist[:t.pos+1]
+		}
+		t.hist = append(t.hist, shown)
+		t.pos = len(t.hist) - 1
+		t.lbl.Set("textContent", labelFor(shown))
+		if active >= 0 && tabs[active] == t {
+			addr.Set("value", shown)
+		}
+		syncNav()
+		return nil
+	}))
 }
 
 // watchDirect reads a natively rendered page's title and icon once it has
@@ -577,6 +675,10 @@ func addTab(url string) {
 	tabs = append(tabs, t)
 	navigate(t, url)
 	activate(indexOf(t))
+	// A new tab is for typing an address into, so the bar takes the cursor.
+	if url == startURL {
+		addr.Call("focus")
+	}
 }
 
 func closeTab(i int) {
@@ -741,7 +843,7 @@ func Open(root js.Value) {
 		case "Escape":
 			// Put back what the tab is actually showing, as browsers do.
 			if t := cur(); t != nil {
-				addr.Set("value", t.hist[t.pos])
+				addr.Set("value", addrText(t.hist[t.pos]))
 			}
 			addr.Call("blur")
 		}
