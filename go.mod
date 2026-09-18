@@ -7,7 +7,7 @@ require (
 	github.com/0magnet/desk v0.0.0-20260915183806-a236d7492c93
 	github.com/0magnet/netscrape v0.0.0-20260915192127-4908689b2961
 	github.com/0magnet/sh/v3 v3.13.2-0.20260818190530-13d0024da85c
-	github.com/0magnet/websh v0.0.0-20260918095400-01adea695972
+	github.com/0magnet/websh v0.0.0-20260918134315-870649e5bd83
 	github.com/0magnet/winbox-go v0.0.0-20260915183431-ca6572e4c323
 )
 
