@@ -21,14 +21,14 @@ github.com/0magnet/sh/v3/syntax
 # github.com/0magnet/u-root v0.16.1-0.20260814161052-156e0b67262b
 ## explicit; go 1.25.7
 github.com/0magnet/u-root/pkg/ls
-# github.com/0magnet/websh v0.0.0-20260916100931-8694a72a6d94
+# github.com/0magnet/websh v0.0.0-20260918095400-01adea695972
 ## explicit; go 1.26.0
 github.com/0magnet/websh/shell
 github.com/0magnet/websh/web
 # github.com/0magnet/winbox-go v0.0.0-20260915183431-ca6572e4c323
 ## explicit; go 1.24
 github.com/0magnet/winbox-go
-# github.com/0magnet/xterm-go v0.0.0-20260915170035-1ea079f51d60
+# github.com/0magnet/xterm-go v0.0.0-20260918025541-d7185c9db583
 ## explicit; go 1.24
 github.com/0magnet/xterm-go
 github.com/0magnet/xterm-go/vt
@@ -40,8 +40,8 @@ github.com/benhoyt/goawk/internal/resolver
 github.com/benhoyt/goawk/interp
 github.com/benhoyt/goawk/lexer
 github.com/benhoyt/goawk/parser
-# github.com/dustin/go-humanize v1.0.1
-## explicit; go 1.16
+# github.com/dustin/go-humanize v1.1.0
+## explicit; go 1.21
 github.com/dustin/go-humanize
 # github.com/itchyny/gojq v0.12.19
 ## explicit; go 1.24.0
