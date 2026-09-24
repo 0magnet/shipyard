@@ -63,10 +63,39 @@ type Options struct {
 	// NoWebGL forces the DOM renderer.
 	NoWebGL bool
 
+	// NoZoom withholds the ctrl-wheel / ctrl-plus / ctrl-0 zoom, which is
+	// otherwise bound on the element the session was given. A page that wants
+	// those gestures to keep zooming the PAGE, or that binds its own because
+	// the terminal it draws is not the element the user is pointing at, sets
+	// this.
+	NoZoom bool
+
 	// AfterCommand runs after each command line finishes, on the shell's
 	// goroutine. It is where a caller flushes the filesystem somewhere
 	// durable, which has to happen after a command rather than during one.
 	AfterCommand func()
+
+	// Exec is the embedder's own commands. Any command line whose first word
+	// is not a built-in applet is offered here before the filesystem is
+	// searched, and it runs in THIS process on the shell's goroutine.
+	//
+	// That is the difference that matters in a page. A program exec'd from
+	// the filesystem on js/wasm is a separate wasm instance and can only talk
+	// back through pipes; a command reached through this one is a Go function
+	// in the program the shell is embedded in, with everything that program
+	// knows in scope. It may be full-screen — the terminal is right here, and
+	// Session sets RawMode and Size on the shell for exactly that.
+	//
+	//
+	// The context carries the shell that dispatched the command, so a
+	// full-screen one can find the terminal it was typed into:
+	// web.SessionForContext(ctx). A page can hold several terminals, and an
+	// embedder that instead remembers the one it built will draw on the wrong
+	// one as soon as it does.
+	//
+	// Report handled false for a command you do not recognize and the shell
+	// carries on as though the hook were not set.
+	Exec func(ctx context.Context, args []string) (code int, handled bool)
 
 	// OnExit runs when the shell exits — the `exit` builtin, or anything
 	// else that makes the interpreter report an exiting shell — on the
@@ -103,6 +132,10 @@ type Session struct {
 	stdinQ    chan []byte
 	cancelRun context.CancelFunc
 	closed    bool
+
+	// zoomFns are the ctrl-wheel / ctrl-plus listeners; see zoom.go.
+	zoomEl  js.Value
+	zoomFns []zoomBinding
 
 	afterCommand func()
 	onExit       func()
@@ -154,6 +187,9 @@ func NewSession(el js.Value, opt Options) (*Session, error) {
 			js.Global().Get("console").Call("log", "websh: webgl unavailable: "+err.Error())
 		}
 	}
+	if !opt.NoZoom {
+		s.wireZoom(el, s.Term.FontSize())
+	}
 
 	stdinR, stdinW := io.Pipe()
 	s.stdinW = stdinW
@@ -193,6 +229,7 @@ func NewSession(el js.Value, opt Options) (*Session, error) {
 
 	// Full-screen applets take raw bytes and need the size.
 	sh.RawMode = func(on bool) { s.rawInput = on }
+	sh.Exec = opt.Exec
 	sh.Size = func() (int, int) { return s.Term.Core.Cols(), s.Term.Core.Rows() }
 
 	s.Term.Core.OnData = s.onData
@@ -388,6 +425,7 @@ func (s *Session) Close() {
 	}
 	s.closed = true
 	forgetSession(s)
+	s.releaseZoom()
 	if s.stdinQ != nil {
 		close(s.stdinQ)
 		s.stdinQ = nil
