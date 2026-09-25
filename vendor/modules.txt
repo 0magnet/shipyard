@@ -21,7 +21,7 @@ github.com/0magnet/sh/v3/syntax
 # github.com/0magnet/u-root v0.16.1-0.20260814161052-156e0b67262b
 ## explicit; go 1.25.7
 github.com/0magnet/u-root/pkg/ls
-# github.com/0magnet/websh v0.0.0-20260924101249-532bfb67c68a
+# github.com/0magnet/websh v0.0.0-20260924101532-76422c7ff9c3
 ## explicit; go 1.26.0
 github.com/0magnet/websh/shell
 github.com/0magnet/websh/web
