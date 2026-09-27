@@ -7,7 +7,7 @@ github.com/0magnet/afero/mem
 ## explicit; go 1.26
 github.com/0magnet/desk
 github.com/0magnet/desk/dom
-# github.com/0magnet/netscrape v0.0.0-20260915192127-4908689b2961
+# github.com/0magnet/netscrape v0.0.0-20260926214617-d7402b7093ea
 ## explicit; go 1.24
 github.com/0magnet/netscrape
 # github.com/0magnet/sh/v3 v3.13.2-0.20260818190530-13d0024da85c
