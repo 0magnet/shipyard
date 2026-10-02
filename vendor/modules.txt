@@ -7,7 +7,7 @@ github.com/0magnet/afero/mem
 ## explicit; go 1.26
 github.com/0magnet/desk
 github.com/0magnet/desk/dom
-# github.com/0magnet/netscrape v0.0.0-20260930210759-680b944d1da2
+# github.com/0magnet/netscrape v0.0.0-20261001192040-bd1d1ef079b7
 ## explicit; go 1.24
 github.com/0magnet/netscrape
 # github.com/0magnet/sh/v3 v3.13.2-0.20260928172341-4c52a7abff02
@@ -21,7 +21,7 @@ github.com/0magnet/sh/v3/syntax
 # github.com/0magnet/u-root v0.16.1-0.20260814161052-156e0b67262b
 ## explicit; go 1.25.7
 github.com/0magnet/u-root/pkg/ls
-# github.com/0magnet/websh v0.0.0-20261001114507-ccf76b5415bd
+# github.com/0magnet/websh v0.0.0-20261001114753-0401a7704ac9
 ## explicit; go 1.26.0
 github.com/0magnet/websh/shell
 github.com/0magnet/websh/web
