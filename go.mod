@@ -3,17 +3,17 @@ module github.com/0magnet/shipyard
 go 1.27
 
 require (
-	github.com/0magnet/afero v1.15.1-0.20260816202415-9f9d46a34dcd
-	github.com/0magnet/desk v0.0.0-20260927163817-533c8cb313fe
-	github.com/0magnet/netscrape v0.0.0-20261001192040-bd1d1ef079b7
-	github.com/0magnet/sh/v3 v3.13.2-0.20260928172341-4c52a7abff02
-	github.com/0magnet/websh v0.0.0-20261001114753-0401a7704ac9
-	github.com/0magnet/winbox-go v0.0.0-20260915183431-ca6572e4c323
+	github.com/0magnet/afero v1.15.1-0.20261003211811-482680d00992
+	github.com/0magnet/desk v0.0.0
+	github.com/0magnet/netscrape v0.0.0
+	github.com/0magnet/sh/v3 v3.13.2-0.20261003215414-58d567267b7a
+	github.com/0magnet/websh v0.0.1-0.20261004111413-c7475d2d8608
+	github.com/0magnet/winbox-go v0.0.0
 )
 
 require (
-	github.com/0magnet/u-root v0.16.1-0.20260814161052-156e0b67262b // indirect
-	github.com/0magnet/xterm-go v0.0.0-20260930222525-d3033e9b370a // indirect
+	github.com/0magnet/u-root v0.16.1-0.20261003214924-44e47b732754 // indirect
+	github.com/0magnet/xterm-go v0.0.1-0.20261004020305-36b45f096b30 // indirect
 	github.com/benhoyt/goawk v1.32.0 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/itchyny/gojq v0.12.19 // indirect

@@ -1,34 +1,36 @@
-# github.com/0magnet/afero v1.15.1-0.20260816202415-9f9d46a34dcd
-## explicit; go 1.25.0
+# github.com/0magnet/afero v1.15.1-0.20261003211811-482680d00992
+## explicit; go 1.26.0
 github.com/0magnet/afero
 github.com/0magnet/afero/internal/common
 github.com/0magnet/afero/mem
-# github.com/0magnet/desk v0.0.0-20260927163817-533c8cb313fe
+# github.com/0magnet/desk v0.0.0
 ## explicit; go 1.26
 github.com/0magnet/desk
 github.com/0magnet/desk/dom
-# github.com/0magnet/netscrape v0.0.0-20261001192040-bd1d1ef079b7
+# github.com/0magnet/netscrape v0.0.0
 ## explicit; go 1.24
 github.com/0magnet/netscrape
-# github.com/0magnet/sh/v3 v3.13.2-0.20260928172341-4c52a7abff02
+# github.com/0magnet/sh/v3 v3.13.2-0.20261003215414-58d567267b7a
 ## explicit; go 1.26.0
 github.com/0magnet/sh/v3/expand
 github.com/0magnet/sh/v3/fileutil
 github.com/0magnet/sh/v3/internal
+github.com/0magnet/sh/v3/internal/arithm
 github.com/0magnet/sh/v3/interp
 github.com/0magnet/sh/v3/pattern
 github.com/0magnet/sh/v3/syntax
-# github.com/0magnet/u-root v0.16.1-0.20260814161052-156e0b67262b
-## explicit; go 1.25.7
+# github.com/0magnet/u-root v0.16.1-0.20261003214924-44e47b732754
+## explicit; go 1.26.6
 github.com/0magnet/u-root/pkg/ls
-# github.com/0magnet/websh v0.0.0-20261001114753-0401a7704ac9
-## explicit; go 1.26.0
+# github.com/0magnet/websh v0.0.1-0.20261004111413-c7475d2d8608
+## explicit; go 1.26.6
 github.com/0magnet/websh/shell
+github.com/0magnet/websh/shell/sed
 github.com/0magnet/websh/web
-# github.com/0magnet/winbox-go v0.0.0-20260915183431-ca6572e4c323
+# github.com/0magnet/winbox-go v0.0.0
 ## explicit; go 1.24
 github.com/0magnet/winbox-go
-# github.com/0magnet/xterm-go v0.0.0-20260930222525-d3033e9b370a
+# github.com/0magnet/xterm-go v0.0.1-0.20261004020305-36b45f096b30
 ## explicit; go 1.24
 github.com/0magnet/xterm-go
 github.com/0magnet/xterm-go/vt
