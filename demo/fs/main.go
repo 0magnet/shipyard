@@ -22,17 +22,17 @@ import (
 
 func main() {
 	dir := "/work/fsdemo"
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		fmt.Println("fs: mkdir failed:", err)
 		os.Exit(1)
 	}
 	path := filepath.Join(dir, "note.txt")
 	content := []byte("written to /work by a real Go program, on a real filesystem, in a browser tab.\n")
-	if err := os.WriteFile(path, content, 0o644); err != nil {
+	if err := os.WriteFile(path, content, 0o600); err != nil {
 		fmt.Println("fs: write failed:", err)
 		os.Exit(1)
 	}
-	got, err := os.ReadFile(path)
+	got, err := os.ReadFile(path) //nolint:gosec // a path this program just built
 	if err != nil {
 		fmt.Println("fs: read failed:", err)
 		os.Exit(1)

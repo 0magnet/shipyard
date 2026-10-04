@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 // forward fetches base+the request's path (and query) upstream, following
@@ -37,19 +38,29 @@ func forward(base string) http.HandlerFunc {
 		if r.URL.RawQuery != "" {
 			url += "?" + r.URL.RawQuery
 		}
-		resp, err := client.Get(url)
+		resp, err := client.Get(url) //nolint:gosec // forwarding upstream is the point
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
 		}
-		defer resp.Body.Close()
 		for k, vv := range resp.Header {
 			for _, v := range vv {
 				w.Header().Add(k, v)
 			}
 		}
 		w.WriteHeader(resp.StatusCode)
-		io.Copy(w, resp.Body)
+		relay(w, resp)
+	}
+}
+
+// relay copies an upstream body to the caller and closes it. The status line
+// is already sent, so a failure can only be logged.
+func relay(w io.Writer, resp *http.Response) {
+	if _, err := io.Copy(w, resp.Body); err != nil {
+		log.Printf("relay: %v", err)
+	}
+	if err := resp.Body.Close(); err != nil {
+		log.Printf("relay: close: %v", err)
 	}
 }
 
@@ -101,18 +112,17 @@ func main() {
 			http.Error(w, "missing url", http.StatusBadRequest)
 			return
 		}
-		log.Printf("fetch %s", target)
-		resp, err := webClient.Get(target)
+		log.Printf("fetch %q", target)     //nolint:gosec // %q escapes it
+		resp, err := webClient.Get(target) //nolint:gosec // an open forward proxy, by design (see above)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
 		}
-		defer resp.Body.Close()
 		if ct := resp.Header.Get("Content-Type"); ct != "" {
 			w.Header().Set("Content-Type", ct)
 		}
 		w.WriteHeader(resp.StatusCode)
-		io.Copy(w, resp.Body)
+		relay(w, resp)
 	})
 
 	if goroot != "" {
@@ -123,5 +133,6 @@ func main() {
 
 	log.Printf("shipwright: http://localhost%s  (/goproxy → %s, sumdb → %s)",
 		*addr, strings.TrimPrefix(*upstream, "https://"), strings.TrimPrefix(*sumdb, "https://"))
-	log.Fatal(http.ListenAndServe(*addr, mux))
+	srv := &http.Server{Addr: *addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	log.Fatal(srv.ListenAndServe())
 }

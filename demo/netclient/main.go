@@ -45,19 +45,19 @@ func main() {
 	const url = "http://127.0.0.1:8080/ping"
 	resp, err := client.Get(url)
 	if err != nil {
-		fmt.Fprintf(os.Stdout, "netclient: GET %s failed: %v\n(is the server running? try `run server.wasm` first)\n", url, err)
+		fmt.Printf("netclient: GET %s failed: %v\n(is the server running? try `run server.wasm` first)\n", url, err)
 		os.Exit(1)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck,gosec // a read-only body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Fprintf(os.Stdout, "netclient: read body failed: %v\n", err)
+		fmt.Printf("netclient: read body failed: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Fprintf(os.Stdout, "netclient: GET %s -> %s, %d bytes\n", url, resp.Status, len(body))
-	fmt.Fprintf(os.Stdout, "netclient: body = %q\n", string(body))
+	fmt.Printf("netclient: GET %s -> %s, %d bytes\n", url, resp.Status, len(body))
+	fmt.Printf("netclient: body = %q\n", string(body))
 	// The server answers /ping with a line carrying SHIPYARD-VNET-PAGE; echo a
 	// self-describing marker the selftest greps for in the terminal.
-	fmt.Fprintf(os.Stdout, "SHIPYARD-NETCLIENT-MARKER: a Go net/http client fetched %d bytes from a Go server over vnet\n", len(body))
+	fmt.Printf("SHIPYARD-NETCLIENT-MARKER: a Go net/http client fetched %d bytes from a Go server over vnet\n", len(body))
 }

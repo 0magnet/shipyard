@@ -20,6 +20,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"syscall/js"
@@ -59,16 +60,24 @@ func status(msg string) {
 	el.Set("textContent", msg)
 }
 
+// reply writes a response body. A failure means the client went away, which
+// is worth a console line and nothing more.
+func reply(w http.ResponseWriter, body string) {
+	if _, err := io.WriteString(w, body); err != nil {
+		js.Global().Get("console").Call("error", "server: "+err.Error())
+	}
+}
+
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ping", func(w http.ResponseWriter, _ *http.Request) {
 		hits++
-		fmt.Fprintf(w, "pong over vnet — SHIPYARD-VNET-PAGE\n")
+		reply(w, "pong over vnet — SHIPYARD-VNET-PAGE\n")
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		hits++
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, page, hits, time.Now().Format("15:04:05"))
+		reply(w, fmt.Sprintf(page, hits, time.Now().Format("15:04:05")))
 	})
 
 	// vnet.Listen is net.Listen with a browser escape hatch: on js/wasm a
@@ -83,7 +92,8 @@ func main() {
 	}
 	status("Go net/http server listening on vnet 127.0.0.1:8080\n\nBrowse to http://127.0.0.1:8080/ in the netscrape\nbrowser (run browser.wasm) — the request is dialed\nover vnet, entirely inside this tab.")
 	js.Global().Get("console").Call("log", "server: net/http listening on vnet:8080")
-	if err := http.Serve(ln, mux); err != nil {
+	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	if err := srv.Serve(ln); err != nil {
 		js.Global().Get("console").Call("error", "server: "+err.Error())
 	}
 }

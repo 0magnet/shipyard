@@ -13,7 +13,12 @@ import (
 )
 
 func main() {
-	b, _ := io.ReadAll(os.Stdin)
-	os.Stdout.Write([]byte(strings.ToUpper(string(b))))
+	b, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		os.Exit(1)
+	}
+	if _, err := os.Stdout.Write([]byte(strings.ToUpper(string(b)))); err != nil {
+		os.Exit(1)
+	}
 	os.Exit(3)
 }

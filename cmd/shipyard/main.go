@@ -180,7 +180,7 @@ func runApplet(_ context.Context, s *shell.Shell, hc *interp.HandlerContext, arg
 		for _, x := range a {
 			msg = strings.Replace(msg, "%s", x, 1)
 		}
-		w.Write([]byte(msg))
+		w.Write([]byte(msg)) //nolint:errcheck,gosec // a failed write to stderr has nowhere to go
 	}
 	// args excludes the command name: args[0] is the program, args[1:] its args.
 	if len(args) < 1 {
