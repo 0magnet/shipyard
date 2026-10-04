@@ -79,6 +79,12 @@ window management, grown inside skywire. That version lives on the
 [`js` branch](https://github.com/0magnet/netscrape/tree/js). `main` is the Go
 rewrite; consumers move over as it reaches parity.
 
+## Related projects
+
+Another browser engine running inside a browser tab:
+
+- [Firefox in WebAssembly](https://developer.puter.com/labs/firefox-wasm/) — Puter's Gecko compiled to WebAssembly, a full browser engine inside a tab
+
 ## Dependency Graph
 
 Made with [goda](https://github.com/loov/goda):
