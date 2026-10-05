@@ -3,7 +3,7 @@
 github.com/0magnet/afero
 github.com/0magnet/afero/internal/common
 github.com/0magnet/afero/mem
-# github.com/0magnet/desk v0.0.1-0.20261004014112-6745b410dec7
+# github.com/0magnet/desk v0.0.2
 ## explicit; go 1.26
 github.com/0magnet/desk
 github.com/0magnet/desk/dom
@@ -22,7 +22,7 @@ github.com/0magnet/sh/v3/syntax
 # github.com/0magnet/u-root v0.16.1-0.20261003214924-44e47b732754
 ## explicit; go 1.26.6
 github.com/0magnet/u-root/pkg/ls
-# github.com/0magnet/websh v0.0.1-0.20261004200853-adb76a8fa4c2
+# github.com/0magnet/websh v0.0.1-0.20261005122733-2d8844db30a0
 ## explicit; go 1.26.6
 github.com/0magnet/websh/shell
 github.com/0magnet/websh/shell/sed
