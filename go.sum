@@ -1,5 +1,7 @@
 github.com/0magnet/afero v1.15.1-0.20261003211811-482680d00992 h1:pZAOYtc0bq6O2bND5d/QRt9k1rctn24XrEJocleRqAw=
 github.com/0magnet/afero v1.15.1-0.20261003211811-482680d00992/go.mod h1:NSftFi+9304TBnW2Le6Vd3q19YrVL3CbErMOMDmPxmU=
+github.com/0magnet/bottle v0.0.1-0.20261008002436-e62e87c5f3a9 h1:Q2NYXD43f9XR8WScO4Y/vYhfIgEfOinLXrvxtSf0feA=
+github.com/0magnet/bottle v0.0.1-0.20261008002436-e62e87c5f3a9/go.mod h1:02z8sWzqF3QH4SjMxnx5bnysFUqsw9CdUTtIj+CIxkw=
 github.com/0magnet/desk v0.0.2 h1:bMpt6DgQALd8VMVCb3OB/RAI5QsChTQBEpdwM9VZaaw=
 github.com/0magnet/desk v0.0.2/go.mod h1:E8JYepaH9Bi5L5e0+GhJAYQr8UeMziBqTPYhvPqNZwI=
 github.com/0magnet/netscrape v0.0.1-0.20261004014115-1bb4ba7bb673 h1:byLTfvN1hbF8T00D9ncxgBHt90U3owRmsz67CG1r8GA=
@@ -8,12 +10,12 @@ github.com/0magnet/sh/v3 v3.13.2-0.20261004194540-aa2d6e4a31a5 h1:phE5/F4rBgh+VE
 github.com/0magnet/sh/v3 v3.13.2-0.20261004194540-aa2d6e4a31a5/go.mod h1:ngQcnC5AqtrdAe3n1WaXvxXU63Jex0A7zKpJ4xQMfmQ=
 github.com/0magnet/u-root v0.16.1-0.20261003214924-44e47b732754 h1:wK2MncQOnEea7yqiOHvv3oD89sc+YC1dAw4zw1o48mQ=
 github.com/0magnet/u-root v0.16.1-0.20261003214924-44e47b732754/go.mod h1:9N1kqBjNdAUT/pfrWKyty4zS5ZQgG1OvsTmhdcpAWB0=
-github.com/0magnet/websh v0.0.1-0.20261005122733-2d8844db30a0 h1:J32VjhbXMWIQouz9bmok/zUtdsZZCGHlv/D7+xjNHyk=
-github.com/0magnet/websh v0.0.1-0.20261005122733-2d8844db30a0/go.mod h1:Aqg4+OB7CBhbs6gBZfdgPGCQTNcwZcFVn5tHrKk5c9U=
-github.com/0magnet/winbox-go v0.0.0 h1:OTu+XbGvpTUWUD5pMS5kHqFwj+MVDcKiEYECOV7X7CQ=
-github.com/0magnet/winbox-go v0.0.0/go.mod h1:19+/rRQWd/tc9/8CFcUr6C+3AipeZmHyyda2tVombe4=
-github.com/0magnet/xterm-go v0.0.1-0.20261004020305-36b45f096b30 h1:ia7DsHkHyPfAELdvIp9E7TTq1zYrhPMN8LDxh+sJ07Q=
-github.com/0magnet/xterm-go v0.0.1-0.20261004020305-36b45f096b30/go.mod h1:W6c6ofSTsxXuQEr1rSZ3qmfOj5a3LGB3uLQBL0/TiKc=
+github.com/0magnet/websh v0.0.1-0.20261008121003-a781059c4002 h1:RY4S8YswO8GdGQVBDbwDstqW4EM+u4eNx0QEafdcIag=
+github.com/0magnet/websh v0.0.1-0.20261008121003-a781059c4002/go.mod h1:0cX8SW//Gz82+/nYDRFhn9JsM+Iu6kPEfWkwJk4SE8Y=
+github.com/0magnet/winbox-go v0.0.1-0.20261004205602-89c284da50a4 h1:ssgEEz3Sm9NVj0LhrNkAhdx7FT0Cr0AT2s+pdbAgSzs=
+github.com/0magnet/winbox-go v0.0.1-0.20261004205602-89c284da50a4/go.mod h1:19+/rRQWd/tc9/8CFcUr6C+3AipeZmHyyda2tVombe4=
+github.com/0magnet/xterm-go v0.0.1-0.20261008111650-79c0fb379673 h1:Xuo2QbTkrOSaJShJLfg4kZaDPz6jlMf+GJY8jA6gl04=
+github.com/0magnet/xterm-go v0.0.1-0.20261008111650-79c0fb379673/go.mod h1:W6c6ofSTsxXuQEr1rSZ3qmfOj5a3LGB3uLQBL0/TiKc=
 github.com/benhoyt/goawk v1.32.0 h1:CK/mnBxGsNqX8hdghPIctl2aGIcwfnhT6sv+9M/bY7w=
 github.com/benhoyt/goawk v1.32.0/go.mod h1:jXTQxBxtQ0VsjFqc8dw7tIJj3SDzQN8kcdMq7r83/ZA=
 github.com/creack/pty v1.1.24 h1:bJrF4RRfyJnbTJqzRLHzcGaZK1NeM5kTC9jGgovnR1s=
