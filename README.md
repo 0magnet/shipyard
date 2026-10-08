@@ -137,7 +137,7 @@ instantiating another wasm module.
 
 ## Build
 
-    ./build.sh          # builds shipyard.wasm + pulls shipwright's toolchain into web/
+    ./build.sh          # builds shipyard.wasm; clones .shipwright and .bottle and copies their toolchain (go-proc.wasm, compile-proc.wasm, jsfs.js, ...) into the repo root
     go run ./serve      # http://localhost:8931, static + the /goproxy passthrough
 
 Then open `http://localhost:8931/demo.html`.
@@ -166,13 +166,16 @@ gocloc --not-match-d='(vendor|node_modules|\.git)' .
 -------------------------------------------------------------------------------
 Language                     files          blank        comment           code
 -------------------------------------------------------------------------------
-Go                              16            130            254            908
-JavaScript                       1             12             40            254
-HTML                             3             27             53            207
-Markdown                         1             22              0            114
-Bourne Shell                     2             16             39            103
+Go                              17            155            343           1026
+HTML                             3             29            107            321
+JavaScript                       1             12             43            257
+Markdown                         1             31              0            147
+Bourne Shell                     2             20             57            112
+Makefile                         1             21             52            111
 YAML                             1              0              7             98
+XML                              1              0              0              4
+Plain Text                       1              1              0              3
 -------------------------------------------------------------------------------
-TOTAL                           24            207            393           1684
+TOTAL                           28            269            609           2079
 -------------------------------------------------------------------------------
 ```
