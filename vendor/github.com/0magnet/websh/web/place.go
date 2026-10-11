@@ -72,6 +72,9 @@ type placeData struct {
 	Fit string `json:"fit"`
 	// Input gives the placement the mouse over it, instead of the program.
 	Input bool `json:"input"`
+	// Page, with Input, lets the mouse over it go on to the page around the
+	// terminal as well (takeInput).
+	Page bool `json:"page"`
 	// Events reports what happens to the placement to the program, on its
 	// input: clicks on it (with Input), and messages from its widget.
 	Events bool `json:"events"`
@@ -131,7 +134,7 @@ func (p *placements) place(id string, d placeData) {
 		return
 	}
 	if old := p.by[id]; old != nil {
-		if old.d.URL == d.URL && old.d.Widget == d.Widget && old.d.Fit == d.Fit && old.d.Input == d.Input && old.d.Events == d.Events {
+		if old.d.URL == d.URL && old.d.Widget == d.Widget && old.d.Fit == d.Fit && old.d.Input == d.Input && old.d.Page == d.Page && old.d.Events == d.Events {
 			old.d = d // same content: only moved
 			p.position(old)
 			return
@@ -237,7 +240,13 @@ func (p *placements) remove(id string) {
 		pl.port.Call("close")
 	}
 	pl.onMsg.Release()
+	// A placement taken away while it had the keys gives them back to the
+	// terminal: otherwise they go nowhere until the person clicks it.
+	focused := pl.el.Call("contains", js.Global().Get("document").Get("activeElement")).Truthy()
 	pl.el.Call("remove")
+	if focused {
+		p.s.Term.Focus()
+	}
 }
 
 // mountOffered fills pl with a widget a program offered. Its mount and
@@ -288,23 +297,43 @@ func (p *placements) clear() {
 }
 
 // takeInput gives pl the mouse over it. The terminal listens on elements
-// around the layer, so the events stop at pl: they would otherwise reach it
-// as well, as clicks and wheel turns for the program. A press keeps the
-// focus where it was, so the keys still go to the program.
+// around the layer, so what starts something — a press, a click, a wheel
+// turn, a touch — stops at pl: it would otherwise reach the program too. A
+// press keeps the focus where it was, so the keys still go to the program.
+//
+// Moves and releases go on, to the document and the window, where a widget's
+// drag (a knob, a slider) follows the pointer: stopped here, a drag begun on
+// pl would never move or end. A mouse's are marked handled (preventDefault),
+// which the terminal reads as not its own; touches whose start it never saw
+// it ignores already.
+//
+// A placement for the page (Page) stops nothing: everything goes on to the
+// page around the terminal, as though the terminal were not there, and all
+// of it is marked handled, so the terminal leaves it alone. It is marked on
+// the element too (data-websh-page), for a page's own handlers to tell a
+// press on it from a press on the terminal's cells.
 func (p *placements) takeInput(pl *placement) {
 	pl.el.Get("style").Set("pointerEvents", "auto")
-	for _, name := range []string{"mousedown", "mouseup", "mousemove", "click", "dblclick", "contextmenu", "wheel", "touchstart", "touchmove", "touchend"} {
-		f := js.FuncOf(func(_ js.Value, args []js.Value) any {
-			e := args[0]
-			e.Call("stopPropagation")
-			if e.Get("type").String() == "mousedown" {
-				e.Call("preventDefault")
-			}
-			return nil
-		})
-		pl.el.Call("addEventListener", name, f)
-		pl.stops = append(pl.stops, f)
+	on := func(names []string, h func(e js.Value)) {
+		for _, name := range names {
+			f := js.FuncOf(func(_ js.Value, args []js.Value) any { h(args[0]); return nil })
+			pl.el.Call("addEventListener", name, f)
+			pl.stops = append(pl.stops, f)
+		}
 	}
+	handled := func(e js.Value) { e.Call("preventDefault") }
+	if pl.d.Page {
+		pl.el.Call("setAttribute", "data-websh-page", "")
+		on([]string{"mousedown", "mousemove", "mouseup", "click", "dblclick", "contextmenu", "wheel", "touchstart", "touchmove", "touchend"}, handled)
+		return
+	}
+	on([]string{"mousedown", "click", "dblclick", "contextmenu", "wheel", "touchstart"}, func(e js.Value) {
+		e.Call("stopPropagation")
+		if e.Get("type").String() == "mousedown" {
+			e.Call("preventDefault")
+		}
+	})
+	on([]string{"mousemove", "mouseup"}, handled)
 }
 
 // post gives the widget in placement id a message from the program.

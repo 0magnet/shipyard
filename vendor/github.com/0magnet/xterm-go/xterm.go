@@ -640,9 +640,16 @@ func (t *Terminal) wireDomEvents() {
 		return nil
 	}))
 
+	// A mouse event something over the terminal has already handled
+	// (preventDefault) is not the terminal's: a widget laid over its cells
+	// lets it on to the document, where a handler of its own is listening.
+	// The wheel, the touches and the context menu read the same mark.
 	// focus terminal on click, and start a selection unless the application
 	// has asked for the mouse itself
 	t.element.Call("addEventListener", "mousedown", t.fn(func(_ js.Value, args []js.Value) any {
+		if args[0].Get("defaultPrevented").Bool() {
+			return nil
+		}
 		if t.selectionMouseDown(args[0]) {
 			return nil
 		}
@@ -650,11 +657,17 @@ func (t *Terminal) wireDomEvents() {
 		return nil
 	}))
 	t.element.Call("addEventListener", "mouseup", t.fn(func(_ js.Value, args []js.Value) any {
+		if args[0].Get("defaultPrevented").Bool() {
+			return nil
+		}
 		t.reportMouse(args[0], vt.MouseActionUp)
 		t.Focus()
 		return nil
 	}))
 	t.element.Call("addEventListener", "mousemove", t.fn(func(_ js.Value, args []js.Value) any {
+		if args[0].Get("defaultPrevented").Bool() {
+			return nil
+		}
 		if t.Core.MouseService().AreMouseEventsActive() {
 			t.reportMouse(args[0], vt.MouseActionMove)
 		}
@@ -669,6 +682,9 @@ func (t *Terminal) wireDomEvents() {
 	// wheel: scroll our own viewport (or report to the app)
 	t.element.Call("addEventListener", "wheel", t.fn(func(_ js.Value, args []js.Value) any {
 		ev := args[0]
+		if ev.Get("defaultPrevented").Bool() {
+			return nil
+		}
 		if t.Core.MouseService().AreMouseEventsActive() {
 			t.reportWheel(ev)
 			ev.Call("preventDefault")
