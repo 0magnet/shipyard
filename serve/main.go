@@ -16,17 +16,19 @@
 // and both the fetch and its verification cross same-origin.
 //
 //	go run ./serve            # :8931, / = static, /goproxy = proxy + sumdb
-//	go run ./serve -addr :9000 -upstream https://goproxy.cn
+//	go run ./serve --addr :9000 --upstream https://goproxy.cn
 package main
 
 import (
-	"flag"
 	"io"
 	"log"
 	"net/http"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/0magnet/calvin/clihelp"
+	"github.com/spf13/cobra"
 )
 
 // forward fetches base+the request's path (and query) upstream, following
@@ -65,25 +67,39 @@ func relay(w io.Writer, resp *http.Response) {
 }
 
 func main() {
-	addr := flag.String("addr", ":8931", "listen address")
-	dir := flag.String("dir", ".", "directory to serve")
-	upstream := flag.String("upstream", "https://proxy.golang.org", "Go module proxy to pass through to")
-	sumdb := flag.String("sumdb", "https://sum.golang.org", "checksum database to mirror")
-	stdroot := flag.String("stdroot", "", "GOROOT to serve std source from at /std/ (default: `go env GOROOT`)")
-	flag.Parse()
+	var addr, dir, upstream, sumdb, stdroot string
+	cmd := &cobra.Command{
+		Use:          "serve",
+		Short:        "serve the shipwright page, Go proxy and checksum-db mirror",
+		SilenceUsage: true,
+		Run:          func(*cobra.Command, []string) { run(addr, dir, upstream, sumdb, stdroot) },
+	}
+	f := cmd.Flags()
+	f.StringVar(&addr, "addr", ":8931", "listen address")
+	f.StringVar(&dir, "dir", ".", "directory to serve")
+	f.StringVar(&upstream, "upstream", "https://proxy.golang.org", "Go module proxy to pass through to")
+	f.StringVar(&sumdb, "sumdb", "https://sum.golang.org", "checksum database to mirror")
+	f.StringVar(&stdroot, "stdroot", "", "GOROOT to serve std source from at /std/ (default: "go env GOROOT")")
+	clihelp.Init(cmd, "serve")
+	if err := cmd.Execute(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run(addr, dir, upstream, sumdb, stdroot string) {
 
 	// /std/<goroot-relative> serves standard-library source, so the page can
 	// seed a lazy skeleton and fetch each file's bytes only when a build first
-	// imports it. Rooted at GOROOT (from -stdroot, else `go env GOROOT`).
-	goroot := *stdroot
+	// imports it. Rooted at GOROOT (from --stdroot, else `go env GOROOT`).
+	goroot := stdroot
 	if goroot == "" {
 		if out, err := exec.Command("go", "env", "GOROOT").Output(); err == nil {
 			goroot = strings.TrimSpace(string(out))
 		}
 	}
 
-	modFwd := forward(*upstream)
-	sumFwd := forward(*sumdb)
+	modFwd := forward(upstream)
+	sumFwd := forward(sumdb)
 
 	mux := http.NewServeMux()
 
@@ -129,10 +145,10 @@ func main() {
 		mux.Handle("/std/", http.StripPrefix("/std/", http.FileServer(http.Dir(goroot))))
 	}
 
-	mux.Handle("/", http.FileServer(http.Dir(*dir)))
+	mux.Handle("/", http.FileServer(http.Dir(dir)))
 
 	log.Printf("shipwright: http://localhost%s  (/goproxy → %s, sumdb → %s)",
-		*addr, strings.TrimPrefix(*upstream, "https://"), strings.TrimPrefix(*sumdb, "https://"))
-	srv := &http.Server{Addr: *addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+		addr, strings.TrimPrefix(upstream, "https://"), strings.TrimPrefix(sumdb, "https://"))
+	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	log.Fatal(srv.ListenAndServe())
 }
