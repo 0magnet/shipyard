@@ -79,7 +79,7 @@ func main() {
 	f.StringVar(&dir, "dir", ".", "directory to serve")
 	f.StringVar(&upstream, "upstream", "https://proxy.golang.org", "Go module proxy to pass through to")
 	f.StringVar(&sumdb, "sumdb", "https://sum.golang.org", "checksum database to mirror")
-	f.StringVar(&stdroot, "stdroot", "", "GOROOT to serve std source from at /std/ (default: "go env GOROOT")")
+	f.StringVar(&stdroot, "stdroot", "", "GOROOT to serve std source from at /std/ (default: `go env GOROOT`)")
 	clihelp.Init(cmd, "serve")
 	if err := cmd.Execute(); err != nil {
 		log.Fatal(err)
