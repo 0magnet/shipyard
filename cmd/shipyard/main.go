@@ -45,8 +45,6 @@ import (
 // the Applications menu — rather than from a prompt — inherits.
 var shellEnv []string
 
-const greeting = "shipyard — go is on your PATH.\r\n  go version   |   cd /work && go build .   |   run ./hello.wasm\r\n"
-
 // ---- the terminal ---------------------------------------------------------
 
 // termPane is a websh shell as a desk pane.
@@ -66,11 +64,10 @@ var terms []*termPane
 
 func (t *termPane) Mount(el js.Value) error {
 	s, err := web.NewSession(el, web.Options{
-		FS:       afero.NewOsFs(), // == bottle's jsfs on js/wasm
-		Host:     "user@shipyard",
-		Greeting: greeting,
-		Env:      shellEnv,
-		NoWebGL:  true, // DOM renderer, so a headless check can read the buffer
+		FS:      afero.NewOsFs(), // == bottle's jsfs on js/wasm
+		Host:    "user@shipyard",
+		Env:     shellEnv,
+		NoWebGL: true, // DOM renderer, so a headless check can read the buffer
 	})
 	if err != nil {
 		return err
