@@ -13,7 +13,7 @@ github.com/0magnet/calvin/clihelp
 # github.com/0magnet/coloredcobra v1.0.4-0.20261012213101-faa6bd8f94c5
 ## explicit; go 1.26.0
 github.com/0magnet/coloredcobra
-# github.com/0magnet/desk v0.0.3-0.20261013224924-704914fa689d
+# github.com/0magnet/desk v0.0.3-0.20261014102802-0dc854720e7a
 ## explicit; go 1.26.6
 github.com/0magnet/desk
 github.com/0magnet/desk/dom
@@ -32,7 +32,7 @@ github.com/0magnet/sh/v3/syntax
 # github.com/0magnet/u-root v0.16.1-0.20261003214924-44e47b732754
 ## explicit; go 1.26.6
 github.com/0magnet/u-root/pkg/ls
-# github.com/0magnet/websh v0.0.1-0.20261013224812-80fb27c22dec
+# github.com/0magnet/websh v0.0.1-0.20261013225449-0d54b04ae8e4
 ## explicit; go 1.26.6
 github.com/0magnet/websh/progressive
 github.com/0magnet/websh/shell
