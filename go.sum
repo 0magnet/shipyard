@@ -6,8 +6,8 @@ github.com/0magnet/calvin v0.0.1-0.20261013221715-da6581155df3 h1:9H++x4esxGkKAn
 github.com/0magnet/calvin v0.0.1-0.20261013221715-da6581155df3/go.mod h1:d4VzbsL3w6CReFvi3Jbv5V/0U6/BQabOl3feTiuVG7A=
 github.com/0magnet/coloredcobra v1.0.4-0.20261012213101-faa6bd8f94c5 h1:EitsijGOC/B/n+ziuxUBkIy9xhgVnmcDZVOW4eE1xGc=
 github.com/0magnet/coloredcobra v1.0.4-0.20261012213101-faa6bd8f94c5/go.mod h1:XOyBWsYWPuG3gboQHaOve/ubY8HaTqCGjJ+791sF5cM=
-github.com/0magnet/desk v0.0.3-0.20261015100712-c16be09f592b h1:4xzRmpGoEmMYUxbKPuC+DFFl6mpYBcFf9UlPHB9VDqQ=
-github.com/0magnet/desk v0.0.3-0.20261015100712-c16be09f592b/go.mod h1:NPx6LtX41IqA+T3iGPCbRo6V6GZUXdciVKZqMhIuaAo=
+github.com/0magnet/desk v0.0.3-0.20261016095909-69e7bc7ac63c h1:Rv9BaePCXR8kPsamMND/9FKhtUdV2YH6Jrw/cTWL91M=
+github.com/0magnet/desk v0.0.3-0.20261016095909-69e7bc7ac63c/go.mod h1:NPx6LtX41IqA+T3iGPCbRo6V6GZUXdciVKZqMhIuaAo=
 github.com/0magnet/netscrape v0.0.1-0.20261013224547-9fae42cd783b h1:Nfe6QIrJSq6e3x5rDljq/kvwHrHLlnVjKgs4Mh0rrVw=
 github.com/0magnet/netscrape v0.0.1-0.20261013224547-9fae42cd783b/go.mod h1:0UGPmH5MoyGHYRJ840Rpi0qh0spNqdOsq7GBi1xqyHc=
 github.com/0magnet/sh/v3 v3.13.2-0.20261004194540-aa2d6e4a31a5 h1:phE5/F4rBgh+VE51tU7Y6ZusHkQnECwIBBZHQJf7S5M=
