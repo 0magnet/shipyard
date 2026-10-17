@@ -13,7 +13,7 @@ github.com/0magnet/calvin/clihelp
 # github.com/0magnet/coloredcobra v1.0.4-0.20261012213101-faa6bd8f94c5
 ## explicit; go 1.26.0
 github.com/0magnet/coloredcobra
-# github.com/0magnet/desk v0.0.3-0.20261016095909-69e7bc7ac63c
+# github.com/0magnet/desk v0.0.3-0.20261017093540-c9579830f467
 ## explicit; go 1.26.6
 github.com/0magnet/desk
 github.com/0magnet/desk/dom
@@ -32,7 +32,7 @@ github.com/0magnet/sh/v3/syntax
 # github.com/0magnet/u-root v0.16.1-0.20261003214924-44e47b732754
 ## explicit; go 1.26.6
 github.com/0magnet/u-root/pkg/ls
-# github.com/0magnet/websh v0.0.1-0.20261013225449-0d54b04ae8e4
+# github.com/0magnet/websh v0.0.1-0.20261017093436-7bef6ef3dc58
 ## explicit; go 1.26.6
 github.com/0magnet/websh/progressive
 github.com/0magnet/websh/shell
@@ -54,6 +54,9 @@ github.com/benhoyt/goawk/internal/resolver
 github.com/benhoyt/goawk/interp
 github.com/benhoyt/goawk/lexer
 github.com/benhoyt/goawk/parser
+# github.com/clipperhouse/uax29/v2 v2.7.0
+## explicit; go 1.18
+github.com/clipperhouse/uax29/v2/graphemes
 # github.com/dustin/go-humanize v1.1.0
 ## explicit; go 1.21
 github.com/dustin/go-humanize
@@ -75,6 +78,9 @@ github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.24
 ## explicit; go 1.20
 github.com/mattn/go-isatty
+# github.com/mattn/go-runewidth v0.0.31
+## explicit; go 1.23
+github.com/mattn/go-runewidth
 # github.com/spf13/cobra v1.10.2
 ## explicit; go 1.15
 github.com/spf13/cobra
