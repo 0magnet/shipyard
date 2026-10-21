@@ -8,7 +8,7 @@ require (
 	github.com/0magnet/desk v0.0.3-0.20261020101438-0b6b4270b7f2
 	github.com/0magnet/netscrape v0.0.1-0.20261013224547-9fae42cd783b
 	github.com/0magnet/sh/v3 v3.13.2-0.20261004194540-aa2d6e4a31a5
-	github.com/0magnet/websh v0.0.1-0.20261017094725-521a340b022b
+	github.com/0magnet/websh v0.0.1-0.20261020221255-e851bfeabe30
 	github.com/0magnet/winbox-go v0.0.1-0.20261013224642-cc4224c41a9c
 	github.com/spf13/cobra v1.10.2
 )
