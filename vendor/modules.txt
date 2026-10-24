@@ -20,7 +20,7 @@ github.com/0magnet/desk/dom
 # github.com/0magnet/netscrape v0.0.1-0.20261013224547-9fae42cd783b
 ## explicit; go 1.26.0
 github.com/0magnet/netscrape
-# github.com/0magnet/sh/v3 v3.13.2-0.20261004194540-aa2d6e4a31a5
+# github.com/0magnet/sh/v3 v3.13.2-0.20261024150911-145e01c63128
 ## explicit; go 1.26.0
 github.com/0magnet/sh/v3/expand
 github.com/0magnet/sh/v3/fileutil
@@ -32,7 +32,7 @@ github.com/0magnet/sh/v3/syntax
 # github.com/0magnet/u-root v0.16.1-0.20261003214924-44e47b732754
 ## explicit; go 1.26.6
 github.com/0magnet/u-root/pkg/ls
-# github.com/0magnet/websh v0.0.1-0.20261023103035-298f720cd375
+# github.com/0magnet/websh v0.0.1-0.20261024151553-9917e7f9f7c8
 ## explicit; go 1.26.6
 github.com/0magnet/websh/progressive
 github.com/0magnet/websh/shell
