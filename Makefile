@@ -51,7 +51,9 @@ LINTCFG := $(dir $(THIS)).golangci.yml
 # never there. Evaluated in the working directory, so the recursion gets the
 # answer for the module it is actually in.
 MODMODE = $(if $(wildcard vendor/modules.txt),vendor,readonly)
-SUBMODULES := $(patsubst %/go.mod,%,$(shell find . -mindepth 2 -name go.mod -not -path './vendor/*' -not -path '*/vendor/*' 2>/dev/null | sort))
+# Dot directories are skipped, as Go's ./... skips them: a build's clones and
+# caches live there (shipyard's .shipwright), and they are not this repo's code.
+SUBMODULES := $(patsubst %/go.mod,%,$(shell find . -mindepth 2 -name go.mod -not -path './vendor/*' -not -path '*/vendor/*' -not -path '*/.*' 2>/dev/null | sort))
 
 define recurse
 @for m in $(SUBMODULES); do \
@@ -80,7 +82,7 @@ format: tidy ## Format the code. Needs goimports (make install-linters)
 	@# and the module root is one of the directories `go list` returns — so the
 	@# /vendor/ filter that used to be here filtered a path that was never passed,
 	@# and a repo with a vendor tree had every vendored file rewritten too.
-	${OPTS} goimports -w -local ${PROJECT_BASE} $(shell find . -name "*.go" -not -path "*/vendor/*" -not -path "*/.git/*")
+	${OPTS} goimports -w -local ${PROJECT_BASE} $(shell find . -name "*.go" -not -path "*/vendor/*" -not -path "*/.*")
 
 lint: ## Run golangci-lint. Needs it installed (make install-linters)
 	command -v golangci-lint || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
