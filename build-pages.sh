@@ -60,7 +60,7 @@ if [ ! -d .bottle ]; then
 else
 	( cd .bottle && git pull -q --ff-only )
 fi
-cp .bottle/vnet.js .bottle/vnet-sw.js .bottle/coi-sw.js .
+cp .bottle/vnet.js .bottle/vnet-sw.js .bottle/coi-sw.js .bottle/update.js .
 
 # demo.json: the whole demo module's source, seeded into the tab at /work/demo
 # so the desk can view and rebuild any gallery demo.
@@ -84,7 +84,7 @@ cp pages.html _site/index.html
 for f in shipyard.wasm browser.wasm server.wasm netclient.wasm fs.wasm timeconc.wasm \
          procparent.wasm procchild.wasm gui.wasm \
          go-proc.wasm compile-proc.wasm link-proc.wasm asm-proc.wasm vet-proc.wasm \
-         jsfs.js fsbridge.js proc.js wasm_exec.js vnet.js vnet-sw.js coi-sw.js toolchain.stamp demos.js demo.json stdsrc.json; do
+         jsfs.js fsbridge.js proc.js wasm_exec.js vnet.js vnet-sw.js coi-sw.js update.js toolchain.stamp demos.js demo.json stdsrc.json; do
 	cp "$f" _site/
 done
 # The custom domain. Pages here is built by a workflow, so the CNAME has to be
@@ -98,5 +98,9 @@ cp CNAME _site/
 # /shipyard-demo.png, and a preview image that 404s is worse than none at all.
 cp robots.txt sitemap.xml _site/
 cp docs/shipyard-demo.png _site/
+# The stamp update.js watches (pages.html): a hash of what was built, so the
+# open page hears of a new build when a file it runs changes, and of nothing
+# when a push changes none.
+cat _site/*.wasm _site/*.js _site/*.json | sha256sum | cut -c1-16 > _site/version.txt
 
 echo "shipyard/pages: _site ready ($(du -sh _site | cut -f1)) — deploy its contents to Pages"

@@ -9,6 +9,7 @@ wasm_exec.js
 vnet.js
 vnet-sw.js
 coi-sw.js
+update.js
 .shipwright/
 .bottle/
 _site/
