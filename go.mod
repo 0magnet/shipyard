@@ -5,10 +5,10 @@ go 1.27
 require (
 	github.com/0magnet/afero v1.15.1-0.20261003211811-482680d00992
 	github.com/0magnet/calvin v0.0.1-0.20261013221715-da6581155df3
-	github.com/0magnet/desk v0.0.3-0.20261101120515-710b516c9541
+	github.com/0magnet/desk v0.0.3-0.20261102142132-c9c7b9c12138
 	github.com/0magnet/netscrape v0.0.1-0.20261013224547-9fae42cd783b
 	github.com/0magnet/sh/v3 v3.13.2-0.20261024150911-145e01c63128
-	github.com/0magnet/websh v0.0.1-0.20261030114348-e83472c01e1a
+	github.com/0magnet/websh v0.0.1-0.20261102141625-b1307c252476
 	github.com/0magnet/winbox-go v0.0.1-0.20261028211148-34d6e7c4492d
 	github.com/spf13/cobra v1.10.2
 )
