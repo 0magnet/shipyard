@@ -6,18 +6,18 @@ github.com/0magnet/afero/mem
 # github.com/0magnet/bottle v0.0.1-0.20261028202309-2b922f28f74e
 ## explicit; go 1.24
 github.com/0magnet/bottle/proc
-# github.com/0magnet/calvin v0.0.1-0.20261013221715-da6581155df3
+# github.com/0magnet/calvin v0.0.1-0.20261106130306-95511d0b3e30
 ## explicit; go 1.26.0
 github.com/0magnet/calvin
 github.com/0magnet/calvin/clihelp
 # github.com/0magnet/coloredcobra v1.0.4-0.20261012213101-faa6bd8f94c5
 ## explicit; go 1.26.0
 github.com/0magnet/coloredcobra
-# github.com/0magnet/desk v0.0.3-0.20261105132841-27c3b9594ed8
+# github.com/0magnet/desk v0.0.3-0.20261106131250-2e9fa7348e74
 ## explicit; go 1.26.6
 github.com/0magnet/desk
 github.com/0magnet/desk/dom
-# github.com/0magnet/netscrape v0.0.1-0.20261013224547-9fae42cd783b
+# github.com/0magnet/netscrape v0.0.1-0.20261106130345-a8165604cf34
 ## explicit; go 1.26.0
 github.com/0magnet/netscrape
 # github.com/0magnet/sh/v3 v3.13.2-0.20261024150911-145e01c63128
@@ -32,14 +32,14 @@ github.com/0magnet/sh/v3/syntax
 # github.com/0magnet/u-root v0.16.1-0.20261003214924-44e47b732754
 ## explicit; go 1.26.6
 github.com/0magnet/u-root/pkg/ls
-# github.com/0magnet/websh v0.0.1-0.20261105132335-53fe5dca2fec
+# github.com/0magnet/websh v0.0.1-0.20261106130811-12119f3c57f3
 ## explicit; go 1.26.6
 github.com/0magnet/websh/progressive
 github.com/0magnet/websh/shell
 github.com/0magnet/websh/shell/sed
 github.com/0magnet/websh/web
 github.com/0magnet/websh/widget
-# github.com/0magnet/winbox-go v0.0.1-0.20261028211148-34d6e7c4492d
+# github.com/0magnet/winbox-go v0.0.1-0.20261106130421-357df562ff6c
 ## explicit; go 1.26.0
 github.com/0magnet/winbox-go
 # github.com/0magnet/xterm-go v0.0.1-0.20261102175652-6023ed24df89
@@ -84,7 +84,7 @@ github.com/mattn/go-runewidth
 # github.com/spf13/cobra v1.10.2
 ## explicit; go 1.15
 github.com/spf13/cobra
-# github.com/spf13/pflag v1.0.10
+# github.com/spf13/pflag v1.1.0
 ## explicit; go 1.12
 github.com/spf13/pflag
 # golang.org/x/sys v0.49.0

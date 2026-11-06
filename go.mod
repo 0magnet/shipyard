@@ -4,12 +4,12 @@ go 1.27
 
 require (
 	github.com/0magnet/afero v1.15.1-0.20261003211811-482680d00992
-	github.com/0magnet/calvin v0.0.1-0.20261013221715-da6581155df3
-	github.com/0magnet/desk v0.0.3-0.20261105132841-27c3b9594ed8
-	github.com/0magnet/netscrape v0.0.1-0.20261013224547-9fae42cd783b
+	github.com/0magnet/calvin v0.0.1-0.20261106130306-95511d0b3e30
+	github.com/0magnet/desk v0.0.3-0.20261106131250-2e9fa7348e74
+	github.com/0magnet/netscrape v0.0.1-0.20261106130345-a8165604cf34
 	github.com/0magnet/sh/v3 v3.13.2-0.20261024150911-145e01c63128
-	github.com/0magnet/websh v0.0.1-0.20261105132335-53fe5dca2fec
-	github.com/0magnet/winbox-go v0.0.1-0.20261028211148-34d6e7c4492d
+	github.com/0magnet/websh v0.0.1-0.20261106130811-12119f3c57f3
+	github.com/0magnet/winbox-go v0.0.1-0.20261106130421-357df562ff6c
 	github.com/spf13/cobra v1.10.2
 )
 
@@ -28,7 +28,7 @@ require (
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-runewidth v0.0.31 // indirect
-	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/spf13/pflag v1.1.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/term v0.47.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
