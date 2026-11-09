@@ -4,12 +4,12 @@ go 1.27
 
 require (
 	github.com/0magnet/afero v1.15.1-0.20261003211811-482680d00992
-	github.com/0magnet/calvin v0.0.1-0.20261106130306-95511d0b3e30
-	github.com/0magnet/desk v0.0.3-0.20261108120443-c2df42133522
-	github.com/0magnet/netscrape v0.0.1-0.20261106130345-a8165604cf34
+	github.com/0magnet/calvin v0.0.1-0.20261109140133-887794fc87eb
+	github.com/0magnet/desk v0.0.3-0.20261109140939-f687736131a0
+	github.com/0magnet/netscrape v0.0.1-0.20261109140215-eea240f3d380
 	github.com/0magnet/sh/v3 v3.13.2-0.20261024150911-145e01c63128
-	github.com/0magnet/websh v0.0.1-0.20261106131606-1973f8bee280
-	github.com/0magnet/winbox-go v0.0.1-0.20261106130421-357df562ff6c
+	github.com/0magnet/websh v0.0.1-0.20261109140532-a1665393304f
+	github.com/0magnet/winbox-go v0.0.1-0.20261109140257-4c5c0e948cd6
 	github.com/spf13/cobra v1.10.2
 )
 
@@ -29,7 +29,7 @@ require (
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-runewidth v0.0.31 // indirect
 	github.com/spf13/pflag v1.1.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/term v0.47.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 )
